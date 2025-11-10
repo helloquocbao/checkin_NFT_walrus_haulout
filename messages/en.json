@@ -1,0 +1,18 @@
+{
+	"Index": {
+		"title": "Hello world!"
+	},
+	"Welcome": {
+		"title": "Welcome to Next.js!",
+		"description": "This is a sample application using Next.js App Router",
+		"create": "npx create-daoquang-next-app",
+		"multiLanguageslDescription": "This template supports multiple languages with Next-Intl, automatically detecting the browser language and redirecting users to the appropriate language. You can add more languages by creating JSON files in the messages folder.",
+		"docs": "Next.js Documentation",
+		"author": "Author: Dr. Dao Quang (Dao Quang Official)",
+		"followMe": "Follow me on",
+		"donate": "Donate",
+		"donateDescription": "If you find this application useful, please consider donating to support me so I can continue developing other open-source projects.",
+		"support": "Support",
+		"multiLanguages": "Multi Languages"
+	}
+}

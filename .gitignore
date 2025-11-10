@@ -1,0 +1,33 @@
+# See https://git-scm.com/docs/gitignore
+
+# Dependencies
+node_modules/
+
+# Builds
+.next/
+out/
+dist/
+.turbo/
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Misc
+.cache/
+coverage/
