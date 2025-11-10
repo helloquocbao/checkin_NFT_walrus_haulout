@@ -33,7 +33,7 @@ export default async function RootLayout({
 }>) {
   const getLocale = async () => {
     const cookieStore = await cookies();
-    return cookieStore.get("NEXT_LOCALE")?.value || "vi";
+    return cookieStore.get("NEXT_LOCALE")?.value || "en";
   };
   const locale = await getLocale();
 
