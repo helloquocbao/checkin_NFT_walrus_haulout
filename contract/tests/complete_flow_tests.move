@@ -19,6 +19,8 @@ const USER3: address = @0x3;
 const USER4: address = @0x4;
 const MINT_FEE: u64 = 10_000_000; // 0.01 SUI
 const CLAIM_FEE: u64 = 10_000_000; // 0.01 SUI
+const UPDATE_FEE: u64 = 50_000_000; // 0.05 SUI
+const VERIFY_FEE: u64 = 20_000_000; // 0.02 SUI
 
 // ==================== Helper Functions ====================
 
@@ -194,6 +196,70 @@ fun test_flow_04_claim_same_badge_multiple_times() {
     ts::end(scenario);
 }
 
+// ==================== Flow 2.5: Profile Update ====================
+
+#[test]
+fun test_flow_04_5_update_profile_success() {
+    let mut scenario = ts::begin(ADMIN);
+    setup_basic(&mut scenario);
+    mint_profile_for_user(&mut scenario, USER1, b"Alice");
+    
+    // Update profile
+    ts::next_tx(&mut scenario, USER1);
+    {
+        let registry = ts::take_shared<ProfileRegistry>(&scenario);
+        let mut profile = ts::take_from_sender<ProfileNFT>(&scenario);
+        let payment = coin::mint_for_testing<SUI>(UPDATE_FEE, ts::ctx(&mut scenario));
+        
+        profiles::update_profile(
+            &registry,
+            &mut profile,
+            string::utf8(b"Alice Updated"),
+            string::utf8(b"New bio"),
+            string::utf8(b"https://new-avatar.jpg"),
+            vector[string::utf8(b"twitter:alice_new")],
+            payment,
+            ts::ctx(&mut scenario)
+        );
+        
+        // Verify profile updated (would need getter functions to check)
+        
+        ts::return_to_sender(&scenario, profile);
+        ts::return_shared(registry);
+    };
+    
+    ts::end(scenario);
+}
+
+#[test]
+#[expected_failure(abort_code = 10)]
+fun test_flow_04_6_update_profile_insufficient_fee() {
+    let mut scenario = ts::begin(ADMIN);
+    setup_basic(&mut scenario);
+    mint_profile_for_user(&mut scenario, USER1, b"Alice");
+    
+    // Try to update with insufficient fee
+    ts::next_tx(&mut scenario, USER1);
+    let registry = ts::take_shared<ProfileRegistry>(&scenario);
+    let mut profile = ts::take_from_sender<ProfileNFT>(&scenario);
+    let payment = coin::mint_for_testing<SUI>(10_000_000, ts::ctx(&mut scenario)); // Only 0.01 SUI
+    
+    profiles::update_profile(
+        &registry,
+        &mut profile,
+        string::utf8(b"Alice"),
+        string::utf8(b"Bio"),
+        string::utf8(b"https://avatar.jpg"),
+        vector[],
+        payment,
+        ts::ctx(&mut scenario)
+    );
+    
+    ts::return_to_sender(&scenario, profile);
+    ts::return_shared(registry);
+    ts::end(scenario);
+}
+
 // ==================== Flow 3: Verification System ====================
 
 #[test]
@@ -210,43 +276,52 @@ fun test_flow_05_complete_verification_flow() {
     // USER2 votes for USER1
     ts::next_tx(&mut scenario, USER2);
     {
+        let registry = ts::take_shared<ProfileRegistry>(&scenario);
         let mut voter_registry = ts::take_shared<VoterRegistry>(&scenario);
         let mut profile1 = ts::take_from_address<ProfileNFT>(&scenario, USER1);
+        let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
         
-        profiles::vote_for_profile(&mut voter_registry, &mut profile1, ts::ctx(&mut scenario));
+        profiles::vote_for_profile(&registry, &mut voter_registry, &mut profile1, payment, ts::ctx(&mut scenario));
         
         assert!(profiles::verify_votes(&profile1) == 1, 0);
         
         ts::return_to_address(USER1, profile1);
         ts::return_shared(voter_registry);
+        ts::return_shared(registry);
     };
     
     // USER3 votes for USER1
     ts::next_tx(&mut scenario, USER3);
     {
+        let registry = ts::take_shared<ProfileRegistry>(&scenario);
         let mut voter_registry = ts::take_shared<VoterRegistry>(&scenario);
         let mut profile1 = ts::take_from_address<ProfileNFT>(&scenario, USER1);
+        let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
         
-        profiles::vote_for_profile(&mut voter_registry, &mut profile1, ts::ctx(&mut scenario));
+        profiles::vote_for_profile(&registry, &mut voter_registry, &mut profile1, payment, ts::ctx(&mut scenario));
         
         assert!(profiles::verify_votes(&profile1) == 2, 0);
         
         ts::return_to_address(USER1, profile1);
         ts::return_shared(voter_registry);
+        ts::return_shared(registry);
     };
     
     // USER4 votes for USER1
     ts::next_tx(&mut scenario, USER4);
     {
+        let registry = ts::take_shared<ProfileRegistry>(&scenario);
         let mut voter_registry = ts::take_shared<VoterRegistry>(&scenario);
         let mut profile1 = ts::take_from_address<ProfileNFT>(&scenario, USER1);
+        let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
         
-        profiles::vote_for_profile(&mut voter_registry, &mut profile1, ts::ctx(&mut scenario));
+        profiles::vote_for_profile(&registry, &mut voter_registry, &mut profile1, payment, ts::ctx(&mut scenario));
         
         assert!(profiles::verify_votes(&profile1) == 3, 0);
         
         ts::return_to_address(USER1, profile1);
         ts::return_shared(voter_registry);
+        ts::return_shared(registry);
     };
     
     // USER1 claims verification
@@ -254,8 +329,9 @@ fun test_flow_05_complete_verification_flow() {
     {
         let registry = ts::take_shared<ProfileRegistry>(&scenario);
         let mut profile1 = ts::take_from_sender<ProfileNFT>(&scenario);
+        let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
         
-        profiles::claim_verification(&registry, &mut profile1, ts::ctx(&mut scenario));
+        profiles::claim_verification(&registry, &mut profile1, payment, ts::ctx(&mut scenario));
         
         assert!(profiles::is_verified(&profile1), 0);
         
@@ -275,13 +351,16 @@ fun test_flow_06_cannot_vote_for_yourself() {
     
     // USER1 tries to vote for themselves
     ts::next_tx(&mut scenario, USER1);
+    let registry = ts::take_shared<ProfileRegistry>(&scenario);
     let mut voter_registry = ts::take_shared<VoterRegistry>(&scenario);
     let mut profile = ts::take_from_sender<ProfileNFT>(&scenario);
+    let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
     
-    profiles::vote_for_profile(&mut voter_registry, &mut profile, ts::ctx(&mut scenario));
+    profiles::vote_for_profile(&registry, &mut voter_registry, &mut profile, payment, ts::ctx(&mut scenario));
     
     ts::return_to_sender(&scenario, profile);
     ts::return_shared(voter_registry);
+    ts::return_shared(registry);
     ts::end(scenario);
 }
 
@@ -296,24 +375,30 @@ fun test_flow_07_cannot_vote_twice_for_same_person() {
     // USER2 votes for USER1 first time
     ts::next_tx(&mut scenario, USER2);
     {
+        let registry = ts::take_shared<ProfileRegistry>(&scenario);
         let mut voter_registry = ts::take_shared<VoterRegistry>(&scenario);
         let mut profile1 = ts::take_from_address<ProfileNFT>(&scenario, USER1);
+        let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
         
-        profiles::vote_for_profile(&mut voter_registry, &mut profile1, ts::ctx(&mut scenario));
+        profiles::vote_for_profile(&registry, &mut voter_registry, &mut profile1, payment, ts::ctx(&mut scenario));
         
         ts::return_to_address(USER1, profile1);
         ts::return_shared(voter_registry);
+        ts::return_shared(registry);
     };
     
     // USER2 tries to vote for USER1 again - should fail
     ts::next_tx(&mut scenario, USER2);
+    let registry = ts::take_shared<ProfileRegistry>(&scenario);
     let mut voter_registry = ts::take_shared<VoterRegistry>(&scenario);
     let mut profile1 = ts::take_from_address<ProfileNFT>(&scenario, USER1);
+    let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
     
-    profiles::vote_for_profile(&mut voter_registry, &mut profile1, ts::ctx(&mut scenario));
+    profiles::vote_for_profile(&registry, &mut voter_registry, &mut profile1, payment, ts::ctx(&mut scenario));
     
     ts::return_to_address(USER1, profile1);
     ts::return_shared(voter_registry);
+    ts::return_shared(registry);
     ts::end(scenario);
 }
 
@@ -332,31 +417,40 @@ fun test_flow_08_cannot_vote_more_than_2_times() {
     // USER4 votes for USER1
     ts::next_tx(&mut scenario, USER4);
     {
+        let registry = ts::take_shared<ProfileRegistry>(&scenario);
         let mut voter_registry = ts::take_shared<VoterRegistry>(&scenario);
         let mut profile1 = ts::take_from_address<ProfileNFT>(&scenario, USER1);
-        profiles::vote_for_profile(&mut voter_registry, &mut profile1, ts::ctx(&mut scenario));
+        let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
+        profiles::vote_for_profile(&registry, &mut voter_registry, &mut profile1, payment, ts::ctx(&mut scenario));
         ts::return_to_address(USER1, profile1);
         ts::return_shared(voter_registry);
+        ts::return_shared(registry);
     };
     
     // USER4 votes for USER2
     ts::next_tx(&mut scenario, USER4);
     {
+        let registry = ts::take_shared<ProfileRegistry>(&scenario);
         let mut voter_registry = ts::take_shared<VoterRegistry>(&scenario);
         let mut profile2 = ts::take_from_address<ProfileNFT>(&scenario, USER2);
-        profiles::vote_for_profile(&mut voter_registry, &mut profile2, ts::ctx(&mut scenario));
+        let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
+        profiles::vote_for_profile(&registry, &mut voter_registry, &mut profile2, payment, ts::ctx(&mut scenario));
         ts::return_to_address(USER2, profile2);
         ts::return_shared(voter_registry);
+        ts::return_shared(registry);
     };
     
     // USER4 tries to vote for USER3 (3rd vote) - should fail
     ts::next_tx(&mut scenario, USER4);
+    let registry = ts::take_shared<ProfileRegistry>(&scenario);
     let mut voter_registry = ts::take_shared<VoterRegistry>(&scenario);
     let mut profile3 = ts::take_from_address<ProfileNFT>(&scenario, USER3);
-    profiles::vote_for_profile(&mut voter_registry, &mut profile3, ts::ctx(&mut scenario));
+    let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
+    profiles::vote_for_profile(&registry, &mut voter_registry, &mut profile3, payment, ts::ctx(&mut scenario));
     
     ts::return_to_address(USER3, profile3);
     ts::return_shared(voter_registry);
+    ts::return_shared(registry);
     ts::end(scenario);
 }
 
@@ -371,19 +465,23 @@ fun test_flow_09_cannot_claim_verify_without_enough_votes() {
     // USER2 votes for USER1 (only 1 vote, need 3)
     ts::next_tx(&mut scenario, USER2);
     {
+        let registry = ts::take_shared<ProfileRegistry>(&scenario);
         let mut voter_registry = ts::take_shared<VoterRegistry>(&scenario);
         let mut profile1 = ts::take_from_address<ProfileNFT>(&scenario, USER1);
-        profiles::vote_for_profile(&mut voter_registry, &mut profile1, ts::ctx(&mut scenario));
+        let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
+        profiles::vote_for_profile(&registry, &mut voter_registry, &mut profile1, payment, ts::ctx(&mut scenario));
         ts::return_to_address(USER1, profile1);
         ts::return_shared(voter_registry);
+        ts::return_shared(registry);
     };
     
     // USER1 tries to claim verification with only 1 vote - should fail
     ts::next_tx(&mut scenario, USER1);
     let registry = ts::take_shared<ProfileRegistry>(&scenario);
     let mut profile = ts::take_from_sender<ProfileNFT>(&scenario);
+    let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
     
-    profiles::claim_verification(&registry, &mut profile, ts::ctx(&mut scenario));
+    profiles::claim_verification(&registry, &mut profile, payment, ts::ctx(&mut scenario));
     
     ts::return_to_sender(&scenario, profile);
     ts::return_shared(registry);
@@ -497,29 +595,38 @@ fun test_flow_13_end_to_end_complete_journey() {
     // 3. Verification voting (USER1 gets 3 votes)
     ts::next_tx(&mut scenario, USER2);
     {
+        let registry = ts::take_shared<ProfileRegistry>(&scenario);
         let mut voter_registry = ts::take_shared<VoterRegistry>(&scenario);
         let mut profile1 = ts::take_from_address<ProfileNFT>(&scenario, USER1);
-        profiles::vote_for_profile(&mut voter_registry, &mut profile1, ts::ctx(&mut scenario));
+        let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
+        profiles::vote_for_profile(&registry, &mut voter_registry, &mut profile1, payment, ts::ctx(&mut scenario));
         ts::return_to_address(USER1, profile1);
         ts::return_shared(voter_registry);
+        ts::return_shared(registry);
     };
     
     ts::next_tx(&mut scenario, USER3);
     {
+        let registry = ts::take_shared<ProfileRegistry>(&scenario);
         let mut voter_registry = ts::take_shared<VoterRegistry>(&scenario);
         let mut profile1 = ts::take_from_address<ProfileNFT>(&scenario, USER1);
-        profiles::vote_for_profile(&mut voter_registry, &mut profile1, ts::ctx(&mut scenario));
+        let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
+        profiles::vote_for_profile(&registry, &mut voter_registry, &mut profile1, payment, ts::ctx(&mut scenario));
         ts::return_to_address(USER1, profile1);
         ts::return_shared(voter_registry);
+        ts::return_shared(registry);
     };
     
     ts::next_tx(&mut scenario, USER4);
     {
+        let registry = ts::take_shared<ProfileRegistry>(&scenario);
         let mut voter_registry = ts::take_shared<VoterRegistry>(&scenario);
         let mut profile1 = ts::take_from_address<ProfileNFT>(&scenario, USER1);
-        profiles::vote_for_profile(&mut voter_registry, &mut profile1, ts::ctx(&mut scenario));
+        let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
+        profiles::vote_for_profile(&registry, &mut voter_registry, &mut profile1, payment, ts::ctx(&mut scenario));
         ts::return_to_address(USER1, profile1);
         ts::return_shared(voter_registry);
+        ts::return_shared(registry);
     };
     
     // 4. USER1 claims verification
@@ -527,8 +634,9 @@ fun test_flow_13_end_to_end_complete_journey() {
     {
         let registry = ts::take_shared<ProfileRegistry>(&scenario);
         let mut profile = ts::take_from_sender<ProfileNFT>(&scenario);
+        let payment = coin::mint_for_testing<SUI>(VERIFY_FEE, ts::ctx(&mut scenario));
         
-        profiles::claim_verification(&registry, &mut profile, ts::ctx(&mut scenario));
+        profiles::claim_verification(&registry, &mut profile, payment, ts::ctx(&mut scenario));
         
         assert!(profiles::is_verified(&profile), 0);
         assert!(profiles::badge_count(&profile) == 1, 1);

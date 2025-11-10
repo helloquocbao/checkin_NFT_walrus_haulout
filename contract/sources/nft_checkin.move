@@ -116,7 +116,7 @@ fun init(otw: PROFILES, ctx: &mut tx_context::TxContext) {
     display::add(&mut display, string::utf8(b"name"), string::utf8(b"{name}"));
     display::add(&mut display, string::utf8(b"description"), string::utf8(b"{bio}"));
     display::add(&mut display, string::utf8(b"image_url"), string::utf8(b"{avatar_url}"));
-    display::add(&mut display, string::utf8(b"creator"), string::utf8(b"Memory token"));
+    display::add(&mut display, string::utf8(b"creator"), string::utf8(b"Memory Mint"));
     display::update_version(&mut display);
 
     let deployer = sender(ctx);
@@ -218,6 +218,39 @@ entry fun add_location(
     registry.total_locations = id + 1;
 }
 
+/// 📝 Update profile information (phí 0.05 SUI)
+entry fun update_profile(
+    registry: &ProfileRegistry,
+    profile: &mut ProfileNFT,
+    new_name: string::String,
+    new_bio: string::String,
+    new_avatar_url: string::String,
+    new_social_links: vector<string::String>,
+    payment: Coin<SUI>,
+    ctx: &mut tx_context::TxContext,
+) {
+    let sender_addr = sender(ctx);
+    
+    // 🔒 Chỉ owner mới update được
+    assert!(profile.owner == sender_addr, 1);
+    
+    // 💰 Thu phí update = 0.05 SUI
+    let fee_amount = 50_000_000; // 0.05 SUI = 5 * 10^7 MIST
+    let balance = coin::value(&payment);
+    assert!(balance >= fee_amount, 10);
+    
+    let mut pay = payment;
+    let fee_coin = coin::split<SUI>(&mut pay, fee_amount, ctx);
+    transfer::public_transfer(fee_coin, registry.deployer);
+    transfer::public_transfer(pay, sender_addr);
+    
+    // ✅ Update profile fields
+    profile.name = new_name;
+    profile.bio = new_bio;
+    profile.avatar_url = new_avatar_url;
+    profile.social_links = new_social_links;
+}
+
 fun image_for_rarity(rarity: u8, template: &BadgeTemplate): string::String {
     if (rarity == 0) {
         template.image_common
@@ -312,10 +345,12 @@ entry fun claim_badge(
     });
 }
 
-/// 🗳️ Vote để verify profile (mỗi user tối đa 2 votes)
+/// 🗳️ Vote để verify profile (mỗi user tối đa 2 votes, phí 0.02 SUI)
 entry fun vote_for_profile(
+    registry: &ProfileRegistry,
     voter_registry: &mut VoterRegistry,
     target_profile: &mut ProfileNFT,
+    payment: Coin<SUI>,
     ctx: &mut tx_context::TxContext,
 ) {
     let voter_addr = sender(ctx);
@@ -324,6 +359,16 @@ entry fun vote_for_profile(
     
     // 🚫 Không thể vote cho chính mình
     assert!(voter_addr != target_addr, 300); // Error: Cannot vote for yourself
+    
+    // 💰 Thu phí vote = 0.02 SUI
+    let fee_amount = 20_000_000; // 0.02 SUI = 2 * 10^7 MIST
+    let balance = coin::value(&payment);
+    assert!(balance >= fee_amount, 10);
+    
+    let mut pay = payment;
+    let fee_coin = coin::split<SUI>(&mut pay, fee_amount, ctx);
+    transfer::public_transfer(fee_coin, registry.deployer);
+    transfer::public_transfer(pay, voter_addr);
     
     // 📊 Check số lượt vote đã dùng
     if (!table::contains(&voter_registry.votes_given, voter_addr)) {
@@ -351,11 +396,12 @@ entry fun vote_for_profile(
     });
 }
 
-/// ✅ Claim verify status (owner tự set sau khi đủ votes)
+/// ✅ Claim verify status (owner tự set sau khi đủ votes, phí 0.02 SUI)
 entry fun claim_verification(
     registry: &ProfileRegistry,
     profile: &mut ProfileNFT,
-    ctx: &tx_context::TxContext,
+    payment: Coin<SUI>,
+    ctx: &mut tx_context::TxContext,
 ) {
     let sender_addr = sender(ctx);
     let profile_id = object::uid_to_address(&profile.id);
@@ -368,6 +414,16 @@ entry fun claim_verification(
     
     // 📊 Check đủ votes chưa
     assert!(profile.verify_votes >= registry.verify_threshold, 304); // Error: Not enough votes
+    
+    // 💰 Thu phí claim verification = 0.02 SUI
+    let fee_amount = 20_000_000; // 0.02 SUI = 2 * 10^7 MIST
+    let balance = coin::value(&payment);
+    assert!(balance >= fee_amount, 10);
+    
+    let mut pay = payment;
+    let fee_coin = coin::split<SUI>(&mut pay, fee_amount, ctx);
+    transfer::public_transfer(fee_coin, registry.deployer);
+    transfer::public_transfer(pay, sender_addr);
     
     // ✅ Set verified
     profile.is_verified = true;
