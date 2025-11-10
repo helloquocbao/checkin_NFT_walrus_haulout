@@ -133,8 +133,16 @@ fun init(otw: PROFILES, ctx: &mut tx_context::TxContext) {
         votes_given: table::new(ctx),
     };
 
+    let location_registry = LocationRegistry {
+        id: object::new(ctx),
+        deployer,
+        total_locations: 0,
+        locations: table::new(ctx),
+    };
+
     transfer::share_object(registry);
     transfer::share_object(voter_registry);
+    transfer::share_object(location_registry);
     transfer::public_transfer(publisher, deployer);
     transfer::public_transfer(display, deployer);
 }

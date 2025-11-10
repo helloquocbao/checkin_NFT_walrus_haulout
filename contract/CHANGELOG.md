@@ -393,21 +393,136 @@ tx.moveCall({
 | `303` | Already verified               |
 | `304` | Not enough votes to verify     |
 
-## 📝 Tests
+## 🏗️ Architecture Overview
+
+### Module Structure
+
+```
+nft_checkin/
+├── profiles (nft_checkin.move)
+│   ├── ProfileNFT
+│   ├── Badge (dynamic field)
+│   └── Verification system
+│
+├── badge_marketplace
+│   ├── TradableBadge (wrapped Badge)
+│   └── Kiosk integration
+│
+├── memory_nft
+│   ├── MemoryNFT (check-in NFT)
+│   └── Random stats (rarity + perfection)
+│
+└── memory_marketplace
+    ├── MemoryListing
+    └── Royalty system
+```
+
+### Data Flow
+
+1. **Profile Creation**: User mints ProfileNFT (0.01 SUI)
+2. **Badge Collection**: User claims badges at locations (gacha, 0.01 SUI)
+3. **Badge Trading**: Epic/Legendary badges → TradableBadge → Kiosk
+4. **Memory Check-in**: User mints MemoryNFT at location (0.03 SUI, random stats)
+5. **Memory Trading**: List MemoryNFT in Kiosk with royalty
+
+### Key Design Patterns
+
+- **Dynamic Fields**: Badges stored as dynamic fields in ProfileNFT
+- **NFT Wrapping**: Badge → TradableBadge for trading
+- **Kiosk Pattern**: Standard Sui marketplace pattern
+- **Transfer Policy**: Royalty enforcement for Memory NFTs
+- **Gacha System**: Deterministic randomness using tx digest
+
+## 📝 Test Coverage
 
 Update test constants:
 
 ```move
+const MINT_FEE: u64 = 10_000_000;   // 0.01 SUI
+const CLAIM_FEE: u64 = 10_000_000;  // 0.01 SUI
 const UPDATE_FEE: u64 = 50_000_000; // 0.05 SUI
 const VERIFY_FEE: u64 = 20_000_000; // 0.02 SUI
+const MEMORY_MINT_FEE: u64 = 30_000_000; // 0.03 SUI
 ```
 
-All tests calling `vote_for_profile()` or `claim_verification()` need to:
+**Test Results:**
 
-1. Add `ProfileRegistry` to parameters
-2. Create payment coin with `VERIFY_FEE`
-3. Pass payment to function
-4. Return shared registry
+```bash
+Test result: OK. Total tests: 46; passed: 46; failed: 0
+```
+
+### Test Breakdown
+
+- **Memory NFT Tests**: 4 tests
+  - Mint success
+  - Mint insufficient fee
+  - Multiple users mint
+  - View functions
+- **Memory Marketplace Tests**: 8 tests
+  - List memory
+  - Buy memory direct
+  - Verify listing data
+  - Delist memory
+  - Single user multiple listings
+  - Royalty calculation
+  - Update royalty (non-admin fails)
+  - Listing view functions
+- **Profile & Badge Tests**: 34 tests
+  - Complete flows (profile, badge, verification)
+  - Error handling
+  - Marketplace integration
+
+## 📦 Deployment Checklist
+
+### Initial Deployment
+
+1. ✅ Deploy `nft_checkin` package (4 modules)
+2. ✅ Get Package ID from output
+3. ✅ Record shared object IDs:
+   - ProfileRegistry
+   - VoterRegistry
+   - LocationRegistry
+   - MarketplaceRegistry (badges)
+   - MemoryRegistry ⭐ NEW
+   - MemoryMarketplaceRegistry ⭐ NEW
+   - TransferPolicy<MemoryNFT> ⭐ NEW
+4. ✅ Update frontend config with IDs
+
+### Required Object IDs
+
+```typescript
+// Save these after deployment
+const CONFIG = {
+  PACKAGE_ID: "0x...",
+  PROFILE_REGISTRY_ID: "0x...",
+  VOTER_REGISTRY_ID: "0x...",
+  LOCATION_REGISTRY_ID: "0x...",
+  BADGE_MARKETPLACE_REGISTRY_ID: "0x...",
+  MEMORY_REGISTRY_ID: "0x...", // ⭐ NEW
+  MEMORY_MARKETPLACE_REGISTRY_ID: "0x...", // ⭐ NEW
+  MEMORY_TRANSFER_POLICY_ID: "0x...", // ⭐ NEW
+  CLOCK_ID: "0x6", // Sui Clock (mainnet/testnet)
+};
+```
+
+## 📚 Documentation
+
+### Source Files
+
+- `sources/nft_checkin.move` - Profile, badge, verification (608 lines)
+- `sources/badge_marketplace.move` - Badge trading (436 lines)
+- `sources/memory_nft.move` - Check-in NFT system (193 lines) ⭐ NEW
+- `sources/memory_marketplace.move` - Memory trading (314 lines) ⭐ NEW
+- `sources/utils/random.move` - Gacha randomness (30 lines)
+
+### Test Files
+
+- `tests/complete_flow_tests.move` - Main test suite (659 lines)
+- `tests/nft_checkin_tests.move` - Unit tests (851 lines)
+- `tests/memory_nft_tests.move` - Memory NFT tests (240 lines) ⭐ NEW
+- `tests/memory_marketplace_tests.move` - Marketplace tests (420 lines) ⭐ NEW
+
+**Total: ~3,751 lines of Move code** 3. Pass payment to function 4. Return shared registry
 
 Example:
 
