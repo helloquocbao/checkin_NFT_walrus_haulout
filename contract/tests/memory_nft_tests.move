@@ -69,7 +69,9 @@ fun test_01_mint_memory_success() {
         assert!(memory_nft::memory_latitude(&memory) == string::utf8(b"10.762622"), 3);
         assert!(memory_nft::memory_longitude(&memory) == string::utf8(b"106.660172"), 4);
         assert!(memory_nft::memory_creator(&memory) == USER1, 5);
-        assert!(memory_nft::memory_likes(&memory) == 0, 6);
+        // Check rarity and perfection are within valid ranges
+        assert!(memory_nft::memory_rarity(&memory) <= 3, 6); // 0-3
+        assert!(memory_nft::memory_perfection(&memory) >= 250 && memory_nft::memory_perfection(&memory) <= 1000, 7);
         
         ts::return_to_sender(&scenario, memory);
     };
@@ -109,65 +111,10 @@ fun test_02_mint_memory_insufficient_fee() {
     ts::end(scenario);
 }
 
-// ==================== Test 03: Like Memory NFT ====================
+// ==================== Test 03: Multiple Memories ====================
 
 #[test]
-fun test_03_like_memory_success() {
-    let mut scenario = ts::begin(ADMIN);
-    setup(&mut scenario);
-    
-    // USER1 mint memory NFT
-    ts::next_tx(&mut scenario, USER1);
-    {
-        let mut registry = ts::take_shared<MemoryRegistry>(&scenario);
-        let clock = ts::take_shared<Clock>(&scenario);
-        let payment = coin::mint_for_testing<SUI>(MINT_FEE, ts::ctx(&mut scenario));
-        
-        memory_nft::mint_memory(
-            &mut registry,
-            string::utf8(b"Test Memory"),
-            string::utf8(b"Test content"),
-            string::utf8(b"https://image.jpg"),
-            string::utf8(b"10.0"),
-            string::utf8(b"106.0"),
-            payment,
-            &clock,
-            ts::ctx(&mut scenario)
-        );
-        
-        ts::return_shared(registry);
-        ts::return_shared(clock);
-    };
-    
-    // USER2 likes the memory
-    ts::next_tx(&mut scenario, USER2);
-    {
-        let mut memory = ts::take_from_address<MemoryNFT>(&scenario, USER1);
-        
-        memory_nft::like_memory(&mut memory, ts::ctx(&mut scenario));
-        assert!(memory_nft::memory_likes(&memory) == 1, 0);
-        
-        ts::return_to_address(USER1, memory);
-    };
-    
-    // USER1 also likes their own memory
-    ts::next_tx(&mut scenario, USER1);
-    {
-        let mut memory = ts::take_from_sender<MemoryNFT>(&scenario);
-        
-        memory_nft::like_memory(&mut memory, ts::ctx(&mut scenario));
-        assert!(memory_nft::memory_likes(&memory) == 2, 1);
-        
-        ts::return_to_sender(&scenario, memory);
-    };
-    
-    ts::end(scenario);
-}
-
-// ==================== Test 04: Multiple Memories ====================
-
-#[test]
-fun test_04_multiple_users_mint_memories() {
+fun test_03_multiple_users_mint_memories() {
     let mut scenario = ts::begin(ADMIN);
     setup(&mut scenario);
     
@@ -273,10 +220,10 @@ fun test_04_multiple_users_mint_memories() {
     ts::end(scenario);
 }
 
-// ==================== Test 05: View Functions ====================
+// ==================== Test 04: View Functions ====================
 
 #[test]
-fun test_05_view_functions() {
+fun test_04_view_functions() {
     let mut scenario = ts::begin(ADMIN);
     setup(&mut scenario);
     
@@ -315,9 +262,13 @@ fun test_05_view_functions() {
         assert!(memory_nft::memory_latitude(&memory) == string::utf8(b"21.028511"), 3);
         assert!(memory_nft::memory_longitude(&memory) == string::utf8(b"105.804817"), 4);
         assert!(memory_nft::memory_creator(&memory) == USER1, 5);
-        assert!(memory_nft::memory_likes(&memory) == 0, 6);
         // created_at là 0 trong test environment
-        assert!(memory_nft::memory_created_at(&memory) == 0, 7);
+        assert!(memory_nft::memory_created_at(&memory) == 0, 6);
+        // Test rarity and perfection view functions
+        let rarity = memory_nft::memory_rarity(&memory);
+        let perfection = memory_nft::memory_perfection(&memory);
+        assert!(rarity <= 3, 7);
+        assert!(perfection >= 250 && perfection <= 1000, 8);
         
         ts::return_to_sender(&scenario, memory);
     };

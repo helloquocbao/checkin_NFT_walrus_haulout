@@ -1,5 +1,6 @@
 module nft_checkin::memory_nft;
 
+use nft_checkin::utils_random;
 use std::string::{Self, String};
 use sui::coin::{Self, Coin};
 use sui::sui::SUI;
@@ -20,7 +21,8 @@ public struct MemoryNFT has key, store {
     longitude: String,               // Kinh độ
     creator: address,                // Người tạo
     created_at: u64,                 // Timestamp
-    likes: u64,                      // Số lượt like
+    rarity: u8,                      // 🎲 Độ hiếm (0=Common, 1=Rare, 2=Epic, 3=Legendary)
+    perfection: u64,                 // 🎯 Độ hoàn hảo (250-1000)
 }
 
 /// 📋 Memory Registry - Quản lý tất cả memories
@@ -40,13 +42,9 @@ public struct MemoryMinted has copy, drop {
     name: String,
     latitude: String,
     longitude: String,
+    rarity: u8,
+    perfection: u64,
     created_at: u64,
-}
-
-public struct MemoryLiked has copy, drop {
-    memory_id: address,
-    liker: address,
-    new_like_count: u64,
 }
 
 /// ⚙️ Init
@@ -64,7 +62,8 @@ fun init(otw: MEMORY_NFT, ctx: &mut tx_context::TxContext) {
     display::add(&mut display, string::utf8(b"latitude"), string::utf8(b"{latitude}"));
     display::add(&mut display, string::utf8(b"longitude"), string::utf8(b"{longitude}"));
     display::add(&mut display, string::utf8(b"creator"), string::utf8(b"{creator}"));
-    display::add(&mut display, string::utf8(b"likes"), string::utf8(b"{likes}"));
+    display::add(&mut display, string::utf8(b"rarity"), string::utf8(b"{rarity}"));
+    display::add(&mut display, string::utf8(b"perfection"), string::utf8(b"{perfection}"));
     display::update_version(&mut display);
     
     // 🏪 Create Registry
@@ -104,7 +103,20 @@ entry fun mint_memory(
     transfer::public_transfer(fee_coin, registry.deployer);
     transfer::public_transfer(pay, sender_addr);
     
-    // 🎨 Create Memory NFT
+    // � Random hóa độ hiếm và độ hoàn hảo (giống badge)
+    let rarity_seed = utils_random::random_number(ctx, 0, 99);
+    let rarity_level: u8 = if (rarity_seed < 60) { 
+        0  // 60% Common
+    } else if (rarity_seed < 85) { 
+        1  // 25% Rare
+    } else if (rarity_seed < 97) { 
+        2  // 12% Epic
+    } else { 
+        3  // 3% Legendary
+    };
+    let perfection = utils_random::random_number(ctx, 250, 1000);
+    
+    // �🎨 Create Memory NFT
     let memory = MemoryNFT {
         id: object::new(ctx),
         name,
@@ -114,7 +126,8 @@ entry fun mint_memory(
         longitude,
         creator: sender_addr,
         created_at: clock::timestamp_ms(clock),
-        likes: 0,
+        rarity: rarity_level,
+        perfection,
     };
     
     let memory_id = object::uid_to_address(&memory.id);
@@ -128,6 +141,8 @@ entry fun mint_memory(
         name: memory.name,
         latitude: memory.latitude,
         longitude: memory.longitude,
+        rarity: rarity_level,
+        perfection,
         created_at: memory.created_at,
     });
     
@@ -135,21 +150,7 @@ entry fun mint_memory(
     transfer::public_transfer(memory, sender_addr);
 }
 
-/// 👍 Like a Memory NFT
-entry fun like_memory(
-    memory: &mut MemoryNFT,
-    ctx: &tx_context::TxContext,
-) {
-    memory.likes = memory.likes + 1;
-    
-    event::emit(MemoryLiked {
-        memory_id: object::uid_to_address(&memory.id),
-        liker: sender(ctx),
-        new_like_count: memory.likes,
-    });
-}
-
-///  View functions
+/// � View functions
 public fun total_memories(registry: &MemoryRegistry): u64 {
     registry.total_memories
 }
@@ -182,8 +183,12 @@ public fun memory_created_at(memory: &MemoryNFT): u64 {
     memory.created_at
 }
 
-public fun memory_likes(memory: &MemoryNFT): u64 {
-    memory.likes
+public fun memory_rarity(memory: &MemoryNFT): u8 {
+    memory.rarity
+}
+
+public fun memory_perfection(memory: &MemoryNFT): u64 {
+    memory.perfection
 }
 
 // ==================== Test-only functions ====================
