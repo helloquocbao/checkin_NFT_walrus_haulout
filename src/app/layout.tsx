@@ -21,7 +21,7 @@ export const metadata: Metadata = {
         height: 600,
       },
     ],
-    locale: "vi_VN", // Replace with appropriate locale
+    locale: "en_US", // Replace with appropriate locale
     type: "website",
   },
 };

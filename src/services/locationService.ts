@@ -62,14 +62,45 @@ export const getAllLocations = async () => {
     const fields = registry.data.content.fields as Record<string, unknown>;
     const totalLocations = parseInt((fields.total_locations as string) || "0");
 
-    // Parse locations từ dynamic fields
+    // Get locations table
+    const locationsTable = fields.locations as {
+      type: string;
+      fields: { id: { id: string } };
+    };
+
+    const tableId = locationsTable.fields.id.id;
+
+    // Fetch each location from the table
     const locations = [];
     for (let i = 0; i < totalLocations; i++) {
-      // TODO: Fetch dynamic field for each location
-      locations.push({
-        id: i,
-        // Add location data
-      });
+      try {
+        const locationField = await suiClient.getDynamicFieldObject({
+          parentId: tableId,
+          name: {
+            type: "u64",
+            value: i.toString(),
+          },
+        });
+
+        if (locationField.data?.content) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const locationData = (locationField.data.content as any).fields.value
+            .fields;
+          locations.push({
+            id: i,
+            name: locationData.location_name,
+            description: locationData.description,
+            latitude: parseFloat(locationData.latitude),
+            longitude: parseFloat(locationData.longitude),
+            imageCommon: locationData.image_common,
+            imageRare: locationData.image_rare,
+            imageEpic: locationData.image_epic,
+            imageLegendary: locationData.image_legendary,
+          });
+        }
+      } catch (error) {
+        console.error(`Error fetching location ${i}:`, error);
+      }
     }
 
     return locations;
