@@ -344,41 +344,26 @@ export default function LocationDetailPage() {
               </span>
             </div>
 
-            {/* Current Badge Info */}
+            {/* Current Badge Info - block nổi bật */}
             {hasBadge && (
-              <div className="mb-8 p-6 bg-green-50 border border-green-200 rounded-lg">
-                <h3 className="text-lg font-semibold text-green-800 mb-2">
-                  Current Badge
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <span className="text-sm text-green-600 font-medium">
-                      Rarity:
-                    </span>
-                    <div
-                      className={`inline-block ml-2 px-3 py-1 rounded-full text-sm font-semibold ${getRarityColor(
-                        userBadge.rarity
-                      )}`}
-                    >
-                      {getRarityName(userBadge.rarity)}
-                    </div>
+              <div className="mb-8 p-6 bg-gradient-to-br from-green-50 to-blue-50 border-2 border-green-300 rounded-xl shadow">
+                <div className="flex items-center gap-4 mb-4">
+                  <div
+                    className={`px-4 py-2 rounded-full text-sm font-bold border ${getRarityColor(
+                      userBadge.rarity
+                    )}`}
+                  >
+                    {getRarityName(userBadge.rarity)}
                   </div>
-                  <div>
-                    <span className="text-sm text-green-600 font-medium">
-                      Perfection:
-                    </span>
-                    <span className="ml-2 text-green-800 font-semibold">
-                      {userBadge.perfection}/1000
-                    </span>
+                  <div className="text-green-700 font-semibold">
+                    Perfection: {userBadge.perfection}/1000
                   </div>
-                  <div>
-                    <span className="text-sm text-green-600 font-medium">
-                      Score:
-                    </span>
-                    <span className="ml-2 text-green-800 font-semibold">
-                      {((userBadge.perfection / 1000) * 100).toFixed(1)}%
-                    </span>
+                  <div className="text-blue-700 font-semibold">
+                    Score: {((userBadge.perfection / 1000) * 100).toFixed(1)}%
                   </div>
+                </div>
+                <div className="text-green-800 font-semibold mb-2">
+                  You have claimed this badge!
                 </div>
               </div>
             )}
@@ -416,6 +401,8 @@ export default function LocationDetailPage() {
                 className={`flex-1 py-4 rounded-lg font-semibold text-lg transition-colors ${
                   claiming
                     ? "bg-blue-300 text-blue-900 cursor-not-allowed"
+                    : hasBadge
+                    ? "bg-green-500 text-green-50 hover:bg-green-600"
                     : "bg-blue-500 text-blue-50 hover:bg-blue-600"
                 }`}
               >
@@ -449,7 +436,7 @@ export default function LocationDetailPage() {
                       rarity
                     </li>
                     <li>
-                      • Each claim costs 0.01 SUI and gives you a new random
+                      • Each reclaim costs 0.01 SUI and gives you a new random
                       badge
                     </li>
                     <li>• Your old badge will be replaced with the new one</li>
