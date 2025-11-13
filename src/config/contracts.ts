@@ -11,51 +11,24 @@ export const CONTRACT_CONFIG = {
   // Package ID - Update after deployment
   PACKAGE_ID:
     process.env.NEXT_PUBLIC_PACKAGE_ID ||
-    "0x5c0d0985b638e9eb212ef70ead4157bf5084972f6601eb2da79ee9dd6b8563c1",
+    "0x90241b2e3e346f647e27f923a9881bc85d21b33ac85f88019cdbf24222f40609",
 
   // ==================== Profile & Badge System ====================
 
   // Profile Registry - Shared object for profile management
   PROFILE_REGISTRY_ID:
     process.env.NEXT_PUBLIC_PROFILE_REGISTRY_ID ||
-    "0xbf06f589a9ff9088291bf4ca4750a7672a0a5facbe8f8edc8dff067dfc637c8e",
+    "0xb8366b5196d8426b64632209247be5e24de5a368312a9680e439d5a24261ab89",
 
   // Voter Registry - Tracks verification votes
   VOTER_REGISTRY_ID:
     process.env.NEXT_PUBLIC_VOTER_REGISTRY_ID ||
-    "0x2f7df66b3a1b2f974dc5ea051d902c69ed85051473a9e72e06d1cfc3fc1b9d4f",
+    "0x87cf00032003b075988ff81c5854f45ecaf185b4963da0fdaae5ae37d0729acf",
 
   // Location Registry - Manages badge locations
   LOCATION_REGISTRY_ID:
     process.env.NEXT_PUBLIC_LOCATION_REGISTRY_ID ||
-    "0x2d59edbb2963adf0215b8a66ea72fd6937c3f8cb8664fce3c8a2afa525ff31d7",
-
-  // Badge Marketplace Registry
-  BADGE_MARKETPLACE_REGISTRY_ID:
-    process.env.NEXT_PUBLIC_BADGE_MARKETPLACE_REGISTRY_ID ||
-    "0x31a29e5afe7fcbee37e2ba826fdfa0c1614758cd86ae396669b16574fc74924e",
-
-  // Badge Transfer Policy
-  BADGE_TRANSFER_POLICY_ID:
-    process.env.NEXT_PUBLIC_BADGE_TRANSFER_POLICY_ID ||
-    "0x842812dcbdc3b95e474c9ba9e31e8a020919b19ec7ffcc5c82c093e53f90a908",
-
-  // ==================== Memory NFT System ====================
-
-  // Memory Registry - Manages Memory NFTs
-  MEMORY_REGISTRY_ID:
-    process.env.NEXT_PUBLIC_MEMORY_REGISTRY_ID ||
-    "0x03f3b5c7e26ba50ff25bd97853a3a69a04c87740a6e7a3bdf5b25735fef67111",
-
-  // Memory Marketplace Registry
-  MEMORY_MARKETPLACE_REGISTRY_ID:
-    process.env.NEXT_PUBLIC_MEMORY_MARKETPLACE_REGISTRY_ID ||
-    "0xc29915fec4d9f406f4f081aebec05cd75f3d4093df530e4a2ea18096b9e0a4a3",
-
-  // Memory Transfer Policy
-  MEMORY_TRANSFER_POLICY_ID:
-    process.env.NEXT_PUBLIC_MEMORY_TRANSFER_POLICY_ID ||
-    "0x6701411b198c121af7487d0372b258ee72b060ba66d95d38fefd51be9dc7ad54",
+    "0x3e9f7664c67a2c0d2c22b32921f1c528aed57631bb36d42a44c43e5b07974687",
 
   // ==================== System Objects ====================
 
@@ -83,9 +56,6 @@ export const FEE_CONFIG = {
  */
 export const MODULES = {
   PROFILES: "profiles",
-  BADGE_MARKETPLACE: "badge_marketplace",
-  MEMORY_NFT: "memory_nft",
-  MEMORY_MARKETPLACE: "memory_marketplace",
 } as const;
 
 /**
@@ -140,7 +110,7 @@ export const isContractConfigured = () => {
   return Boolean(
     CONTRACT_CONFIG.PACKAGE_ID &&
       CONTRACT_CONFIG.PROFILE_REGISTRY_ID &&
-      CONTRACT_CONFIG.MEMORY_REGISTRY_ID
+      CONTRACT_CONFIG.LOCATION_REGISTRY_ID
   );
 };
 

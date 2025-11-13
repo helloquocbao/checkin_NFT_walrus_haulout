@@ -257,51 +257,63 @@ export default function MyProfilePage() {
   }
 
   // ============================================
-  // 1. NO WALLET - Show "Connect wallet" message
+  // 1. NO WALLET - Show form to create profile when they connect
   // ============================================
   if (!currentAccount?.address) {
     return (
       <div className="min-h-screen bg-white pt-20 py-12">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="text-center py-20">
-            <div className="mb-6">
-              <div className="text-6xl mb-4">🔗</div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                Connect Your Wallet
-              </h1>
-              <p className="text-xl text-gray-600 mb-8">
-                Please connect your wallet to view and manage your profile.
+        <div className="max-w-2xl mx-auto px-4">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2 text-center">
+              Create Your Profile
+            </h1>
+            <p className="text-gray-600 text-center mb-8">
+              Connect your wallet to start collecting badges from locations
+            </p>
+
+            {/* Placeholder form showing what will happen */}
+            <div className="space-y-6 opacity-60 pointer-events-none">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter your name"
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Bio
+                </label>
+                <textarea
+                  placeholder="Tell us about yourself (optional)"
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed h-24 resize-none"
+                />
+              </div>
+
+              <button
+                disabled
+                className="w-full py-3 rounded-lg font-semibold text-lg bg-gray-300 text-gray-600 cursor-not-allowed"
+              >
+                Create Profile
+              </button>
+            </div>
+
+            <div className="text-center mt-8">
+              <p className="text-gray-600">
+                <Link
+                  href="/claim-badge"
+                  className="text-blue-600 hover:text-blue-700 font-semibold"
+                >
+                  browse locations first
+                </Link>
               </p>
             </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 max-w-2xl mx-auto">
-              <h2 className="text-lg font-semibold text-blue-900 mb-3">
-                Why connect your wallet?
-              </h2>
-              <ul className="text-left text-gray-700 space-y-2">
-                <li>✓ Create your unique NFT check-in profile</li>
-                <li>✓ Collect badges from different locations</li>
-                <li>✓ Track your achievements and perfection scores</li>
-                <li>✓ Trade and showcase your badges</li>
-              </ul>
-            </div>
-
-            <Link
-              href="/claim-badge"
-              className="inline-block px-6 py-3 bg-blue-500 text-blue-50 rounded-lg hover:bg-blue-600 font-semibold transition-colors mb-4"
-            >
-              Connect Wallet to Get Started
-            </Link>
-
-            <p className="text-gray-600">
-              or{" "}
-              <Link
-                href="/claim-badge"
-                className="text-blue-600 hover:text-blue-700 font-semibold"
-              >
-                browse locations
-              </Link>
-            </p>
           </div>
         </div>
       </div>

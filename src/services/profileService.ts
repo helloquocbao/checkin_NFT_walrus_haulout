@@ -192,6 +192,63 @@ export const hasProfile = async (address: string) => {
 };
 
 /**
+ * Get badge details từ profile
+ * Trả về array of badges với location_id, location_name, image_url, rarity, perfection, created_at
+ */
+export const getBadgesFromProfile = async (address: string) => {
+  try {
+    const profile = await getProfileByAddress(address);
+    if (!profile || !profile.data?.content) return [];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const profileFields = (profile.data.content as any).fields;
+    const claimedBadges = profileFields.claimed_badges || [];
+
+    // Map ClaimedBadgeInfo objects directly
+    const badges = Array.isArray(claimedBadges)
+      ? claimedBadges.map(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (badgeInfo: any) => {
+            // Handle both plain object and Sui object with .fields
+            const data = badgeInfo.fields ? badgeInfo.fields : badgeInfo;
+
+            const locationId =
+              typeof data.location_id === "string"
+                ? parseInt(data.location_id)
+                : data.location_id;
+            const rarity =
+              typeof data.rarity === "string"
+                ? parseInt(data.rarity)
+                : data.rarity;
+            const perfection =
+              typeof data.perfection === "string"
+                ? parseInt(data.perfection)
+                : data.perfection;
+            const createdAt =
+              typeof data.created_at === "string"
+                ? parseInt(data.created_at)
+                : data.created_at;
+
+            return {
+              location_id: locationId,
+              location_name: data.location_name || "",
+              image_url: data.image_url || "",
+              rarity,
+              perfection,
+              created_at: createdAt,
+            };
+          }
+        )
+      : [];
+
+    return badges;
+  } catch (error) {
+    console.error("Error getting badges from profile:", error);
+    return [];
+  }
+};
+
+/**
  * Get verification status
  */
 export const getVerificationStatus = async (profileId: string) => {

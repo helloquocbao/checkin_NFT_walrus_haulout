@@ -5,6 +5,4 @@
 
 export * from "./suiClient";
 export * from "./profileService";
-export * from "./memoryService";
-export * from "./badgeService";
 export * from "./locationService";

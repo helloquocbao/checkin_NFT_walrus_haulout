@@ -101,8 +101,18 @@ export default function LocationDetailPage() {
 
   // Handle claim/reclaim badge
   const handleClaimBadge = async () => {
-    if (!currentAccount?.address || !userProfile || !location) {
-      alert("Please connect wallet and create profile first");
+    if (!currentAccount?.address) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
+    if (!userProfile) {
+      alert("Please create a profile first to claim badges");
+      return;
+    }
+
+    if (!location) {
+      alert("Location not found");
       return;
     }
 
@@ -190,9 +200,12 @@ export default function LocationDetailPage() {
     }
   };
 
-  const userBadge = userBadges.find(
-    (badge) => badge.location_id === locationId
-  );
+  const userBadge = userBadges.find((badge) => {
+    // Debug log
+    console.log("Badge:", badge, "locationId:", locationId);
+    // Ép kiểu location_id về số nếu cần
+    return Number(badge.location_id) === Number(locationId);
+  });
   const hasBadge = !!userBadge;
 
   // Loading state
@@ -229,76 +242,22 @@ export default function LocationDetailPage() {
     );
   }
 
-  // No wallet connected
-  if (!currentAccount?.address) {
-    return (
-      <div className="min-h-screen bg-white pt-20 py-12">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              No Wallet Connected
-            </h2>
-            <p className="text-gray-600 mb-4">
-              Please connect your wallet to claim badges
-            </p>
-            <Link
-              href="/claim-badge"
-              className="bg-blue-500 text-blue-50 px-6 py-2 rounded-lg hover:bg-blue-600 inline-block"
-            >
-              Back to Locations
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // No profile
-  if (!userProfile) {
-    return (
-      <div className="min-h-screen bg-white pt-20 py-12">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              No Profile Found
-            </h2>
-            <p className="text-gray-600 mb-4">
-              You need to create a profile first to claim badges
-            </p>
-            <Link
-              href="/my-profile"
-              className="bg-blue-500 text-blue-50 px-6 py-2 rounded-lg hover:bg-blue-600 inline-block mr-4"
-            >
-              Create Profile
-            </Link>
-            <Link
-              href="/claim-badge"
-              className="bg-gray-500 text-gray-50 px-6 py-2 rounded-lg hover:bg-gray-600 inline-block"
-            >
-              Back to Locations
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-white pt-20 py-12">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 pt-32">
+      <div className="w-full max-w-xl mx-auto px-4">
         {/* Back Button */}
-        <div className="mb-6">
+        <div className="mb-6 text-center">
           <Link
             href="/claim-badge"
-            className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
+            className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-2 text-lg font-semibold"
           >
             ← Back to All Locations
           </Link>
         </div>
 
-        {/* Location Header */}
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
-          <div className="relative h-64 md:h-96">
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+          <div className="relative h-64 md:h-80">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={getLocationImage(userBadge?.rarity)}
@@ -306,48 +265,49 @@ export default function LocationDetailPage() {
               className="w-full h-full object-cover"
             />
 
-            {/* Badge Status Overlay */}
+            {/* Badge Overlay */}
             <div className="absolute top-4 right-4">
               {hasBadge ? (
                 <div
-                  className={`px-4 py-2 rounded-full text-sm font-semibold border ${getRarityColor(
+                  className={`px-4 py-2 rounded-full text-sm font-bold border shadow ${getRarityColor(
                     userBadge.rarity
                   )}`}
                 >
                   ✓ {getRarityName(userBadge.rarity)} Badge
                 </div>
               ) : (
-                <div className="bg-red-100 text-red-600 px-4 py-2 rounded-full text-sm font-semibold border border-red-300">
+                <div className="bg-red-100 text-red-600 px-4 py-2 rounded-full text-sm font-bold border border-red-300 shadow">
                   Not Claimed
                 </div>
               )}
             </div>
-
-            {/* Location ID Badge */}
-            <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-gray-100 px-3 py-2 rounded text-sm">
-              Location #{location.id}
+            {/* Location ID */}
+            <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-gray-100 px-3 py-2 rounded text-sm font-semibold shadow">
+              #{location.id}
             </div>
           </div>
 
           <div className="p-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
               {location.name}
             </h1>
-            <p className="text-gray-600 text-lg mb-6">{location.description}</p>
+            <p className="text-gray-600 text-center mb-4 text-lg">
+              {location.description}
+            </p>
 
             {/* Coordinates */}
-            <div className="flex items-center gap-2 text-gray-500 mb-8">
+            <div className="flex items-center justify-center gap-2 text-gray-500 mb-6">
               <span className="text-lg">📍</span>
-              <span>
-                Latitude: {location.latitude.toFixed(6)} • Longitude:{" "}
+              <span className="text-sm">
+                Lat: {location.latitude.toFixed(6)} • Long:{" "}
                 {location.longitude.toFixed(6)}
               </span>
             </div>
 
             {/* Current Badge Info - block nổi bật */}
             {hasBadge && (
-              <div className="mb-8 p-6 bg-gradient-to-br from-green-50 to-blue-50 border-2 border-green-300 rounded-xl shadow">
-                <div className="flex items-center gap-4 mb-4">
+              <div className="mb-6 p-5 bg-gradient-to-br from-green-50 to-blue-50 border-2 border-green-300 rounded-xl shadow text-center">
+                <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-2">
                   <div
                     className={`px-4 py-2 rounded-full text-sm font-bold border ${getRarityColor(
                       userBadge.rarity
@@ -362,43 +322,43 @@ export default function LocationDetailPage() {
                     Score: {((userBadge.perfection / 1000) * 100).toFixed(1)}%
                   </div>
                 </div>
-                <div className="text-green-800 font-semibold mb-2">
+                <div className="text-green-800 font-semibold">
                   You have claimed this badge!
                 </div>
               </div>
             )}
 
             {/* Rarity Information */}
-            <div className="mb-8">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 text-center">
                 Badge Rarity Chances
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-gray-600">60%</div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-xl font-bold text-gray-600">60%</div>
                   <div className="text-sm text-gray-500">Common</div>
                 </div>
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">25%</div>
+                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                  <div className="text-xl font-bold text-blue-600">25%</div>
                   <div className="text-sm text-blue-500">Rare</div>
                 </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">12%</div>
+                <div className="text-center p-3 bg-purple-50 rounded-lg">
+                  <div className="text-xl font-bold text-purple-600">12%</div>
                   <div className="text-sm text-purple-500">Epic</div>
                 </div>
-                <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                  <div className="text-2xl font-bold text-yellow-600">3%</div>
+                <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                  <div className="text-xl font-bold text-yellow-600">3%</div>
                   <div className="text-sm text-yellow-500">Legendary</div>
                 </div>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col md:flex-row gap-4 mb-2">
               <button
                 onClick={handleClaimBadge}
                 disabled={claiming}
-                className={`flex-1 py-4 rounded-lg font-semibold text-lg transition-colors ${
+                className={`flex-1 py-3 rounded-lg font-semibold text-lg transition-colors ${
                   claiming
                     ? "bg-blue-300 text-blue-900 cursor-not-allowed"
                     : hasBadge
@@ -412,23 +372,22 @@ export default function LocationDetailPage() {
                   ? "Reclaim Badge (0.01 SUI)"
                   : "Claim Badge (0.01 SUI)"}
               </button>
-
               <Link
                 href="/my-profile"
-                className="flex-1 sm:flex-none bg-gray-500 text-gray-50 px-8 py-4 rounded-lg hover:bg-gray-600 text-center font-semibold"
+                className="flex-1 py-3 bg-gray-500 text-gray-50 rounded-lg hover:bg-gray-600 text-center font-semibold"
               >
                 View My Profile
               </Link>
             </div>
 
             {/* Help Text */}
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
               <h4 className="font-semibold text-blue-800 mb-2">
                 {hasBadge
                   ? "Want to Improve Your Badge?"
                   : "How Badge Claiming Works"}
               </h4>
-              <ul className="text-sm text-blue-700 space-y-1">
+              <ul className="text-sm text-blue-700 space-y-1 text-left inline-block">
                 {hasBadge ? (
                   <>
                     <li>

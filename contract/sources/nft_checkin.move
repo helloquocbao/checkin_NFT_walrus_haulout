@@ -22,10 +22,11 @@ public struct ProfileNFT has key {
     social_links: vector<string::String>,
     country: string::String,
     created_at: u64,
-    claimed_badges: vector<u64>,
-    badge_count: u64,
-    is_verified: bool, // ✅ Trạng thái verify
-    verify_votes: u64, // 📊 Số vote nhận được
+    claimed_badges: vector<ClaimedBadgeInfo>, // 📍 Danh sách badges đã claim + stats
+    badge_count: u64,                         // 🏅 Số unique locations đã claim
+    total_claims: u64,                        // 📊 Tổng số lần claim (include reclaim)
+    is_verified: bool,                        // ✅ Trạng thái verify
+    verify_votes: u64,                        // 🗳️ Số vote nhận được
 }
 
 public struct ProfileRegistry has key {
@@ -43,6 +44,16 @@ public struct BadgeKey has copy, drop, store { location_id: u64 }
 public struct Badge has drop, store {
     location_name: string::String,
     description: string::String,
+    image_url: string::String,
+    rarity: u8,
+    perfection: u64,
+    created_at: u64,
+}
+
+/// 📍 Claimed Badge Info - Lưu thông tin badge đã claim (dùng để hiển thị trong profile)
+public struct ClaimedBadgeInfo has copy, drop, store {
+    location_id: u64,
+    location_name: string::String,
     image_url: string::String,
     rarity: u8,
     perfection: u64,
@@ -182,8 +193,9 @@ entry fun mint_profile(
         social_links,
         country,
         created_at: clock::timestamp_ms(clock),
-        claimed_badges: vector::empty<u64>(),
+        claimed_badges: vector::empty<ClaimedBadgeInfo>(),
         badge_count: 0,
+        total_claims: 0,
         is_verified: false,
         verify_votes: 0,
     };
@@ -314,27 +326,42 @@ entry fun claim_badge(
 
     let key = BadgeKey { location_id };
 
-    // 🧱 Ghi đè badge cũ (nếu có)
-    if (df::exists_(&profile.id, key)) {
+    // 🧱 Ghi đè badge cũ (nếu có) - reclaim sẽ update badge
+    let is_new_badge = !df::exists_(&profile.id, key);
+    if (!is_new_badge) {
         df::remove<BadgeKey, Badge>(&mut profile.id, key);
+        // 🔄 Reclaim: xóa old info từ claimed_badges
+        let count = vector::length(&profile.claimed_badges);
+        let mut i = 0;
+        while (i < count) {
+            let badge_info = vector::borrow(&profile.claimed_badges, i);
+            if (badge_info.location_id == location_id) {
+                let _ = vector::remove(&mut profile.claimed_badges, i);
+                break
+            };
+            i = i + 1;
+        };
     };
     df::add<BadgeKey, Badge>(&mut profile.id, key, badge);
 
-    // 🧾 Cập nhật danh sách claimed (chỉ thêm nếu chưa có)
-    let mut found = false;
-    let count = vector::length(&profile.claimed_badges);
-    let mut i = 0;
-    while (i < count) {
-        if (vector::borrow(&profile.claimed_badges, i) == &location_id) {
-            found = true;
-            break
-        };
-        i = i + 1;
-    };
-    if (!found) {
-        vector::push_back(&mut profile.claimed_badges, location_id);
+    // 📊 Cập nhật badge_count và claimed_badges
+    if (is_new_badge) {
         profile.badge_count = profile.badge_count + 1;
     };
+
+    // 📍 Luôn thêm/update badge info trong claimed_badges
+    let badge_info = ClaimedBadgeInfo {
+        location_id,
+        location_name: template.location_name,
+        image_url: img_url,
+        rarity: rarity_level,
+        perfection,
+        created_at: clock::timestamp_ms(clock),
+    };
+    vector::push_back(&mut profile.claimed_badges, badge_info);
+
+    // 📈 Luôn cộng total_claims (mỗi lần claim hoặc reclaim)
+    profile.total_claims = profile.total_claims + 1;
 
     // 🔔 Emit event GachaResult để frontend hiển thị kết quả quay
     event::emit(BadgeGachaResult {
@@ -545,47 +572,19 @@ public fun badge_created_at(badge: &Badge): u64 {
     badge.created_at
 }
 
-/// Create new Badge (for marketplace unwrapping)
-public fun new_badge(
-    location_name: string::String,
-    description: string::String,
-    image_url: string::String,
-    rarity: u8,
-    perfection: u64,
-    created_at: u64,
-): Badge {
-    Badge {
-        location_name,
-        description,
-        image_url,
-        rarity,
-        perfection,
-        created_at,
-    }
-}
-
-/// Destroy badge and return fields (for marketplace wrapping)
-public fun unpack_badge(badge: Badge): (string::String, string::String, string::String, u8, u64, u64) {
-    let Badge {
-        location_name,
-        description,
-        image_url,
-        rarity,
-        perfection,
-        created_at,
-    } = badge;
-    
-    (location_name, description, image_url, rarity, perfection, created_at)
-}
-
-/// Create BadgeKey (for marketplace)
-public fun new_badge_key(location_id: u64): BadgeKey {
-    BadgeKey { location_id }
-}
-
 /// Get badge count
 public fun badge_count(profile: &ProfileNFT): u64 {
     profile.badge_count
+}
+
+/// Get total claims (mỗi lần claim hoặc reclaim)
+public fun total_claims(profile: &ProfileNFT): u64 {
+    profile.total_claims
+}
+
+/// Get claimed badges với stats (location_id, rarity, perfection)
+public fun claimed_badges(profile: &ProfileNFT): vector<ClaimedBadgeInfo> {
+    profile.claimed_badges
 }
 
 /// Get total locations
