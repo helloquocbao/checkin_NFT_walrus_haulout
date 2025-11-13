@@ -11,24 +11,24 @@ export const CONTRACT_CONFIG = {
   // Package ID - Update after deployment
   PACKAGE_ID:
     process.env.NEXT_PUBLIC_PACKAGE_ID ||
-    "0x90241b2e3e346f647e27f923a9881bc85d21b33ac85f88019cdbf24222f40609",
+    "0xc10cf0154a316d7307f954792477ec3c1390207b2798eac7d5a87c30f163d1a6",
 
   // ==================== Profile & Badge System ====================
 
   // Profile Registry - Shared object for profile management
   PROFILE_REGISTRY_ID:
     process.env.NEXT_PUBLIC_PROFILE_REGISTRY_ID ||
-    "0xb8366b5196d8426b64632209247be5e24de5a368312a9680e439d5a24261ab89",
+    "0xe1a85238e3233a1a0d8e71cff8259a40c043320b948c1d715bfd2df4279550f4",
 
   // Voter Registry - Tracks verification votes
   VOTER_REGISTRY_ID:
     process.env.NEXT_PUBLIC_VOTER_REGISTRY_ID ||
-    "0x87cf00032003b075988ff81c5854f45ecaf185b4963da0fdaae5ae37d0729acf",
+    "0x30e4e505640048e565bf8613031514a3d2aa1cea4269b32e9a9a27cafeeee722",
 
   // Location Registry - Manages badge locations
   LOCATION_REGISTRY_ID:
     process.env.NEXT_PUBLIC_LOCATION_REGISTRY_ID ||
-    "0x3e9f7664c67a2c0d2c22b32921f1c528aed57631bb36d42a44c43e5b07974687",
+    "0xe77df3774dfb378923976854c14fd6c982a4c1e3a99d7bdb25b674215c9ccf28",
 
   // ==================== System Objects ====================
 

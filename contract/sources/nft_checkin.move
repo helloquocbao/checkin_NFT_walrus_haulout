@@ -119,6 +119,8 @@ public struct VoterRegistry has key {
     id: UID,
     // Map: voter_address -> VecSet<profile_addresses đã vote>
     votes_given: Table<address, VecSet<address>>,
+    // Map: profile_owner_address -> u64 (số lượt vote nhận được)
+    votes_received: Table<address, u64>,
 }
 
 fun init(otw: PROFILES, ctx: &mut tx_context::TxContext) {
@@ -142,6 +144,7 @@ fun init(otw: PROFILES, ctx: &mut tx_context::TxContext) {
     let voter_registry = VoterRegistry {
         id: object::new(ctx),
         votes_given: table::new(ctx),
+        votes_received: table::new(ctx),
     };
 
     let location_registry = LocationRegistry {
@@ -381,19 +384,18 @@ entry fun claim_badge(
 }
 
 /// 🗳️ Vote để verify profile (mỗi user tối đa 2 votes, phí 0.02 SUI)
+/// Lưu ý: Lưu votes trong VoterRegistry thay vì ProfileNFT (vì ProfileNFT thuộc về user)
 entry fun vote_for_profile(
     registry: &ProfileRegistry,
     voter_registry: &mut VoterRegistry,
-    target_profile: &mut ProfileNFT,
+    target_profile_address: address,
     payment: Coin<SUI>,
     ctx: &mut tx_context::TxContext,
 ) {
     let voter_addr = sender(ctx);
-    let target_addr = target_profile.owner;
-    let profile_id = object::uid_to_address(&target_profile.id);
     
     // 🚫 Không thể vote cho chính mình
-    assert!(voter_addr != target_addr, 300); // Error: Cannot vote for yourself
+    assert!(voter_addr != target_profile_address, 300); // Error: Cannot vote for yourself
     
     // 💰 Thu phí vote = 0.02 SUI
     let fee_amount = 20_000_000; // 0.02 SUI = 2 * 10^7 MIST
@@ -413,27 +415,37 @@ entry fun vote_for_profile(
     let voter_votes = table::borrow_mut(&mut voter_registry.votes_given, voter_addr);
     
     // 🚫 Đã vote cho profile này rồi
-    assert!(!vec_set::contains(voter_votes, &target_addr), 301); // Error: Already voted for this profile
+    assert!(!vec_set::contains(voter_votes, &target_profile_address), 301); // Error: Already voted for this profile
     
     // 🚫 Đã vote tối đa 2 người
     assert!(vec_set::length(voter_votes) < 2, 302); // Error: Max 2 votes per user
     
-    // ✅ Thêm vote
-    vec_set::insert(voter_votes, target_addr);
-    target_profile.verify_votes = target_profile.verify_votes + 1;
+    // ✅ Thêm vote vào votes_given
+    vec_set::insert(voter_votes, target_profile_address);
     
-    // 📢 Emit event
+    // ✅ Cập nhật votes_received
+    if (!table::contains(&voter_registry.votes_received, target_profile_address)) {
+        table::add(&mut voter_registry.votes_received, target_profile_address, 1);
+    } else {
+        let vote_count = table::borrow_mut(&mut voter_registry.votes_received, target_profile_address);
+        *vote_count = *vote_count + 1;
+    };
+    
+    let new_vote_count = *table::borrow(&voter_registry.votes_received, target_profile_address);
+    
+    // 📢 Emit event (注：profile_id 使用 target_profile_address 代替因为我们没有 profile object)
     event::emit(ProfileVoted {
         voter: voter_addr,
-        profile_owner: target_addr,
-        profile_id,
-        new_vote_count: target_profile.verify_votes,
+        profile_owner: target_profile_address,
+        profile_id: target_profile_address,  // Use owner address as profile_id since we don't have the object
+        new_vote_count,
     });
 }
 
 /// ✅ Claim verify status (owner tự set sau khi đủ votes, phí 0.02 SUI)
 entry fun claim_verification(
     registry: &ProfileRegistry,
+    voter_registry: &VoterRegistry,
     profile: &mut ProfileNFT,
     payment: Coin<SUI>,
     ctx: &mut tx_context::TxContext,
@@ -447,8 +459,13 @@ entry fun claim_verification(
     // 🚫 Đã verify rồi
     assert!(!profile.is_verified, 303); // Error: Already verified
     
-    // 📊 Check đủ votes chưa
-    assert!(profile.verify_votes >= registry.verify_threshold, 304); // Error: Not enough votes
+    // 📊 Check đủ votes chưa (từ VoterRegistry)
+    let votes_count = if (table::contains(&voter_registry.votes_received, sender_addr)) {
+        *table::borrow(&voter_registry.votes_received, sender_addr)
+    } else {
+        0
+    };
+    assert!(votes_count >= registry.verify_threshold, 304); // Error: Not enough votes
     
     // 💰 Thu phí claim verification = 0.02 SUI
     let fee_amount = 20_000_000; // 0.02 SUI = 2 * 10^7 MIST
@@ -462,6 +479,7 @@ entry fun claim_verification(
     
     // ✅ Set verified
     profile.is_verified = true;
+    profile.verify_votes = votes_count;  // Update profile with final vote count
     
     // 📢 Emit event
     event::emit(ProfileVerified {

@@ -98,8 +98,9 @@ export const claimBadge = async (profileId: string, locationId: number) => {
 
 /**
  * Vote cho profile để verify
+ * @param targetProfileOwnerAddress - Địa chỉ (address) của chủ sở hữu profile cần vote, không phải object ID
  */
-export const voteForProfile = async (targetProfileId: string) => {
+export const voteForProfile = async (targetProfileOwnerAddress: string) => {
   const tx = new Transaction();
 
   const [feeCoin] = tx.splitCoins(tx.gas, [FEE_CONFIG.VOTE_PROFILE_FEE]);
@@ -109,7 +110,7 @@ export const voteForProfile = async (targetProfileId: string) => {
     arguments: [
       tx.object(CONTRACT_CONFIG.PROFILE_REGISTRY_ID),
       tx.object(CONTRACT_CONFIG.VOTER_REGISTRY_ID),
-      tx.object(targetProfileId),
+      tx.pure.address(targetProfileOwnerAddress),
       feeCoin,
     ],
   });
@@ -129,6 +130,7 @@ export const claimVerification = async (profileId: string) => {
     target: `${CONTRACT_CONFIG.PACKAGE_ID}::profiles::claim_verification`,
     arguments: [
       tx.object(CONTRACT_CONFIG.PROFILE_REGISTRY_ID),
+      tx.object(CONTRACT_CONFIG.VOTER_REGISTRY_ID),
       tx.object(profileId),
       feeCoin,
     ],
