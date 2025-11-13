@@ -11,6 +11,7 @@ import {
   getProfileDetails,
   voteForProfile,
   claimVerification,
+  getActualVoteCount,
 } from "@/services/profileService";
 
 interface Badge {
@@ -87,6 +88,21 @@ export default function UserProfilePage() {
           is_verified: fields.is_verified,
           verify_votes: parseInt(fields.verify_votes),
         };
+
+        // Get actual vote count from VoterRegistry
+        const profileOwnerAddress = fields.owner || "";
+        if (profileOwnerAddress) {
+          try {
+            const actualVotes = await getActualVoteCount(profileOwnerAddress);
+            profileData.verify_votes = actualVotes;
+            console.log(
+              `Actual votes for ${profileOwnerAddress}: ${actualVotes}`
+            );
+          } catch (err) {
+            console.error("Failed to get actual votes:", err);
+            // Keep the value from profile
+          }
+        }
 
         setProfileInfo(profileData);
         setUserProfile({

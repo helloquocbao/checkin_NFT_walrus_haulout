@@ -269,3 +269,58 @@ export const getVerificationStatus = async (profileId: string) => {
     return null;
   }
 };
+
+/**
+ * Get actual vote count for a profile owner from VoterRegistry
+ * Uses Sui's dynamic field API to query the votes_received table
+ */
+export const getActualVoteCount = async (profileOwnerAddress: string) => {
+  try {
+    // First, fetch VoterRegistry to get votes_received table ID
+    const voterRegistry = await suiClient.getObject({
+      id: CONTRACT_CONFIG.VOTER_REGISTRY_ID,
+      options: {
+        showContent: true,
+      },
+    });
+
+    if (!voterRegistry.data?.content) return 0;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const registryContent = voterRegistry.data.content as any;
+
+    // Get votes_received table object ID
+    const votesReceivedTableId =
+      registryContent.fields?.votes_received?.fields?.id?.id;
+    if (!votesReceivedTableId) {
+      console.error("votes_received table ID not found");
+      return 0;
+    }
+
+    // Query the table for the specific address key
+    try {
+      const tableData = await suiClient.getDynamicFieldObject({
+        parentId: votesReceivedTableId,
+        name: {
+          type: "address",
+          value: profileOwnerAddress,
+        },
+      });
+
+      if (!tableData.data?.content) return 0;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fieldContent = tableData.data.content as any;
+      const voteCount = parseInt(fieldContent.fields?.value || "0");
+      console.log(`Vote count for ${profileOwnerAddress}: ${voteCount}`);
+      return voteCount;
+    } catch {
+      // Key doesn't exist in table = 0 votes
+      console.log("No votes found for address:", profileOwnerAddress);
+      return 0;
+    }
+  } catch (error) {
+    console.error("Error getting actual vote count:", error);
+    return 0;
+  }
+};
