@@ -28,8 +28,11 @@ interface Location {
 
 interface Badge {
   location_id: number;
+  location_name: string;
+  image_url: string;
   rarity: number;
   perfection: number;
+  created_at: number;
 }
 
 interface ProfileData {
@@ -37,7 +40,7 @@ interface ProfileData {
     objectId: string;
     content: {
       fields: {
-        badges: Badge[];
+        claimed_badges: Badge[];
       };
     };
   };
@@ -78,15 +81,36 @@ export default function LocationDetailPage() {
 
         // Load user profile if connected
         if (currentAccount?.address) {
-          const profileExists = await hasProfile(currentAccount.address);
-          if (profileExists) {
-            const profile = await getProfileByAddress(currentAccount.address);
-            if (profile?.data?.content) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const profileFields = (profile.data.content as any).fields;
-              setUserProfile(profile as unknown as ProfileData);
-              setUserBadges(profileFields.badges || []);
+          try {
+            const profileExists = await hasProfile(currentAccount.address);
+            if (profileExists) {
+              const profile = await getProfileByAddress(currentAccount.address);
+              if (profile?.data?.content) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const profileFields = (profile.data.content as any).fields;
+                console.log("Profile fields:", profileFields);
+                console.log(
+                  "Claimed badges from profile:",
+                  profileFields.claimed_badges
+                );
+                setUserProfile(profile as unknown as ProfileData);
+
+                // Extract badges - handle both direct objects and nested .fields
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const badges = (profileFields.claimed_badges || []).map(
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (badge: any) => {
+                    // If badge has .fields, extract them
+                    return badge.fields ? badge.fields : badge;
+                  }
+                );
+
+                setUserBadges(badges);
+                console.log("Set userBadges:", badges);
+              }
             }
+          } catch (err) {
+            console.error("Error loading profile:", err);
           }
         }
       } catch (error) {
@@ -133,7 +157,9 @@ export default function LocationDetailPage() {
             );
             console.log("Badge claimed:", result);
             // Reload the page to get updated badge info
-            window.location.reload();
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500); // Wait 1.5s for blockchain to update
           },
           onError: (error) => {
             console.error("Claim failed:", error);
