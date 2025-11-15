@@ -5,17 +5,18 @@ import CameraCapture from "@/components/cameraCapture/CameraCapture";
 import Meta from "@/components/Meta";
 import { walletModalShow } from "@/redux/counterSlice";
 import {
-  useSignAndExecuteTransaction,
   useCurrentAccount,
+  useSignAndExecuteTransaction,
   useSuiClient,
 } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
+import { CONTRACT_CONFIG } from "@/config/contracts";
 
 export default function Create() {
   const dispatch = useDispatch();
   const account = useCurrentAccount();
+  const { mutate: signAndExecute } = useSignAndExecuteTransaction();
   const client = useSuiClient();
-  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
 
   const [imageBlob, setImageBlob] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
@@ -86,7 +87,7 @@ export default function Create() {
 
     if (!position.latitude || !position.longitude) {
       alert(
-        "⚠️ Vui lòng bật GPS và cấp quyền truy cập vị trí trước khi mint NFT!"
+        "⚠️ Vui lòng bật GPS và cấp quyền truy cập vị trí trước khi upload!"
       );
       return;
     }
@@ -116,9 +117,9 @@ export default function Create() {
         throw new Error("Không tìm thấy blobId trong phản hồi từ Walrus!");
       }
 
-      console.log("🆔 Blob ID:", newBlobId);
-
-      await handleMint(newBlobId);
+      const url_image = `https://aggregator.walrus-testnet.walrus.space/v1/blobs/${newBlobId}`;
+      // Mint memory NFT on chain
+      await handleMint(url_image);
     } catch (err) {
       console.error("❌ Upload error:", err);
       alert(`Upload lỗi: ${err.message}`);
@@ -127,8 +128,8 @@ export default function Create() {
     }
   };
 
-  // 🧩 Mint NFT
-  const handleMint = async (newBlobId) => {
+  // Mint memory NFT on chain
+  const handleMint = async (urlImage) => {
     if (!account) {
       dispatch(walletModalShow());
       return;
@@ -136,65 +137,90 @@ export default function Create() {
 
     setLoading(true);
     try {
-      console.log("🚀 Bắt đầu mint NFT với blobId:", newBlobId);
       const tx = new Transaction();
 
+      // Get gas coin for payment (0.03 SUI for mint fee)
+      const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(50_000_000)]); // 0.05 SUI
+
       tx.moveCall({
-        target: `0xcc84871dc79970f2dab50400699552c2ebeba058c8e6a8a4e9f5ace44464311f::checkin_nft::mint`,
+        target: `${CONTRACT_CONFIG.PACKAGE_ID}::memory_nft::mint_memory`,
         arguments: [
-          tx.pure.string(inputText || "My NFT"),
-          tx.pure.string(newBlobId),
-          tx.pure.string(position.latitude),
-          tx.pure.string(position.longitude),
+          tx.object(CONTRACT_CONFIG.MEMORY_REGISTRY_ID), // MemoryRegistry object
+          tx.pure.string(inputText || "My Memory"),
+          tx.pure.string("Checkin memory from NFT app"),
+          tx.pure.string(urlImage),
+          tx.pure.string(position.latitude || "0"),
+          tx.pure.string(position.longitude || "0"),
+          coin,
+          tx.object("0x6"), // Clock object
         ],
       });
 
-      const result = await signAndExecute({
-        transaction: tx,
-        chain: "sui:testnet",
-      });
+      signAndExecute(
+        { transaction: tx },
+        {
+          onSuccess: async (result) => {
+            console.log("Memory minted successfully:", result);
 
-      // Chờ transaction hoàn tất
-      const txDetails = await client.waitForTransaction({
-        digest: result.digest,
-        options: { showEvents: true, showObjectChanges: true },
-      });
+            // Wait for transaction to finalize
+            const txDetails = await client.waitForTransaction({
+              digest: result.digest,
+              options: { showObjectChanges: true },
+            });
 
-      console.log("📜 Tx details:", txDetails);
-      setInputText("");
-      const created = txDetails.objectChanges?.find(
-        (c) => c.type === "created"
+            // Find created MemoryNFT object
+            const createdObject = txDetails.objectChanges?.find(
+              (change) =>
+                change.type === "created" &&
+                change.objectType?.includes("MemoryNFT")
+            );
+
+            if (createdObject?.objectId) {
+              // Fetch the NFT object details
+              const nftObject = await client.getObject({
+                id: createdObject.objectId,
+                options: { showContent: true },
+              });
+
+              const fields = nftObject.data?.content?.fields;
+
+              setNftInfo({
+                id: createdObject.objectId,
+                name: fields?.name || inputText || "My Memory",
+                content: fields?.content || "",
+                image_url: fields?.image_url || urlImage,
+                latitude: fields?.latitude || position.latitude,
+                longitude: fields?.longitude || position.longitude,
+                rarity: fields?.rarity || 0,
+                perfection: fields?.perfection || 0,
+                created_at: new Date().toISOString(),
+                digest: result.digest,
+              });
+            } else {
+              // Fallback if object not found
+              setNftInfo({
+                name: inputText || "My Memory",
+                image_url: urlImage,
+                latitude: position.latitude,
+                longitude: position.longitude,
+                created_at: new Date().toISOString(),
+                digest: result.digest,
+              });
+            }
+
+            setInputText("");
+            setLoading(false);
+          },
+          onError: (error) => {
+            console.error("Mint failed:", error);
+            alert(`Mint failed: ${error.message}`);
+            setLoading(false);
+          },
+        }
       );
-      const objectId = created?.objectId;
-
-      if (objectId) {
-        const nftObject = await client.getObject({
-          id: objectId,
-          options: { showContent: true },
-        });
-
-        console.log("🎨 NFT Object:", nftObject);
-
-        const fields = nftObject.data?.content?.fields;
-
-        setNftInfo({
-          id: objectId,
-          name: fields?.name,
-          image_url: fields?.image_url,
-          rarity: fields?.rarity,
-          completion: fields?.completion,
-          latitude: fields?.latitude,
-          longitude: fields?.longitude,
-          owner: fields?.owner,
-          digest: result.digest,
-        });
-      } else {
-        alert("Không tìm thấy objectId trong transaction!");
-      }
-    } catch (err) {
-      console.error("Mint error:", err);
-      alert("Mint thất bại!");
-    } finally {
+    } catch (error) {
+      console.error("Error minting memory:", error);
+      alert(`Error: ${error.message}`);
       setLoading(false);
     }
   };
@@ -202,7 +228,6 @@ export default function Create() {
   const handleRetake = () => {
     setImageBlob(null);
     setImagePreview("");
-
     setNftInfo(null);
   };
 
@@ -255,13 +280,13 @@ export default function Create() {
               <button
                 onClick={handleUpload}
                 disabled={uploading || loading}
-                className="bg-accent shadow-accent-volume hover:bg-accent-dark rounded-full py-2 px-6 text-center font-semibold text-white transition-all"
+                className="bg-accent shadow-accent-volume hover:bg-accent-dark rounded-full py-2 px-6 text-center font-semibold text-white transition-all disabled:opacity-50"
               >
                 {uploading
                   ? "Uploading..."
                   : loading
                   ? "Minting..."
-                  : "✨ Upload & Mint"}
+                  : "Upload & Mint"}
               </button>
 
               <button
@@ -272,35 +297,88 @@ export default function Create() {
               </button>
             </div>
 
-            {loading && (
+            {uploading && (
               <p className="text-gray-500 animate-pulse mt-2">
-                Đang xử lý mint NFT...
+                Đang upload ảnh lên Walrus...
               </p>
             )}
 
             {nftInfo && (
               <div className="mt-6 border-t pt-6 w-full max-w-md text-left">
-                <h2 className="text-xl font-semibold mb-3">🎉 NFT Minted!</h2>
+                <h2 className="text-xl font-semibold mb-3">
+                  🎉 Memory NFT Minted!
+                </h2>
 
-                <img
-                  src={`https://aggregator.walrus-testnet.walrus.space/v1/blobs/${nftInfo.image_url}`}
-                  alt={nftInfo.name}
-                  className="w-full rounded-lg shadow-md mb-4"
-                />
+                {nftInfo.image_url && (
+                  <img
+                    src={nftInfo.image_url}
+                    alt={nftInfo.name}
+                    className="w-full rounded-lg shadow-md mb-4 max-h-64 object-cover"
+                    onError={(e) => {
+                      e.target.src =
+                        "https://via.placeholder.com/200?text=Memory";
+                    }}
+                  />
+                )}
 
-                <ul className="space-y-1 text-gray-700 break-words">
-                  <li>
-                    <strong>ID:</strong> {nftInfo.id}
-                  </li>
+                {/* NFT Stats Card */}
+                {(nftInfo.rarity !== undefined ||
+                  nftInfo.perfection !== undefined) && (
+                  <div className="mb-4 p-3 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg border border-purple-300">
+                    <div className="grid grid-cols-2 gap-4">
+                      {nftInfo.rarity !== undefined && (
+                        <div className="text-center">
+                          <p className="text-xs text-gray-600 font-semibold mb-1">
+                            RARITY
+                          </p>
+                          <div className="flex items-center justify-center gap-2">
+                            <span
+                              className={`px-3 py-1 rounded-full text-sm font-bold text-white ${
+                                nftInfo.rarity === 0
+                                  ? "bg-gray-500"
+                                  : nftInfo.rarity === 1
+                                  ? "bg-blue-500"
+                                  : nftInfo.rarity === 2
+                                  ? "bg-purple-500"
+                                  : "bg-yellow-500"
+                              }`}
+                            >
+                              {["Common", "Rare", "Epic", "Legendary"][
+                                nftInfo.rarity
+                              ] || "Unknown"}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {nftInfo.perfection !== undefined && (
+                        <div className="text-center">
+                          <p className="text-xs text-gray-600 font-semibold mb-1">
+                            PERFECTION
+                          </p>
+                          <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-500">
+                            {nftInfo.perfection}
+                          </div>
+                          <p className="text-xs text-gray-500">/1000</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <ul className="space-y-2 text-gray-700 break-words text-sm">
                   <li>
                     <strong>Name:</strong> {nftInfo.name}
                   </li>
-                  <li>
-                    <strong>Rarity:</strong> {nftInfo.rarity}
-                  </li>
-                  <li>
-                    <strong>Completion:</strong> {nftInfo.completion}
-                  </li>
+                  {nftInfo.id && (
+                    <li>
+                      <strong>NFT ID:</strong> {nftInfo.id.substring(0, 16)}...
+                    </li>
+                  )}
+                  {nftInfo.content && (
+                    <li>
+                      <strong>Content:</strong> {nftInfo.content}
+                    </li>
+                  )}
                   <li>
                     <strong>Latitude:</strong> {nftInfo.latitude}
                   </li>
@@ -308,7 +386,8 @@ export default function Create() {
                     <strong>Longitude:</strong> {nftInfo.longitude}
                   </li>
                   <li>
-                    <strong>Owner:</strong> {nftInfo.owner}
+                    <strong>Created:</strong>{" "}
+                    {new Date(nftInfo.created_at).toLocaleString()}
                   </li>
                 </ul>
 
@@ -317,21 +396,33 @@ export default function Create() {
                     <iframe
                       title="Map Preview"
                       width="100%"
-                      height="250"
+                      height="200"
                       className="rounded-lg shadow"
                       loading="lazy"
                       allowFullScreen
                       src={`https://www.google.com/maps?q=${nftInfo.latitude},${nftInfo.longitude}&z=15&output=embed`}
                     />
                   )}
-                  <a
-                    href={`https://suiexplorer.com/txblock/${nftInfo.digest}?network=testnet`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-green-600 underline"
-                  >
-                    🔍 View on Sui Explorer
-                  </a>
+                  {nftInfo.digest && (
+                    <a
+                      href={`https://suiexplorer.com/txblock/${nftInfo.digest}?network=testnet`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-green-600 underline text-sm"
+                    >
+                      View on Sui Explorer
+                    </a>
+                  )}
+                  {nftInfo.id && (
+                    <a
+                      href={`https://suiexplorer.com/object/${nftInfo.id}?network=testnet`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline text-sm"
+                    >
+                      View NFT on Sui Explorer
+                    </a>
+                  )}
                 </div>
               </div>
             )}

@@ -30,6 +30,14 @@ export const CONTRACT_CONFIG = {
     process.env.NEXT_PUBLIC_LOCATION_REGISTRY_ID ||
     "0xe77df3774dfb378923976854c14fd6c982a4c1e3a99d7bdb25b674215c9ccf28",
 
+  // Memory Registry - Manages memory NFTs
+  MEMORY_REGISTRY_ID:
+    process.env.NEXT_PUBLIC_MEMORY_REGISTRY_ID ||
+    "0x93b97ec541aac143027c3856f5dd79a1b64f1310c9c486ab76de0d8db737e6fa",
+  MEMORY_MAKET_PLACE_ID:
+    process.env.NEXT_PUBLIC_MEMORY_MAKET_PLACE_ID ||
+    "0x69a0072d470c9b7168739d0db7f44d219989b192cc4f8cdcc52468373dbc315f",
+
   // ==================== System Objects ====================
 
   // Sui Clock Object (same across all networks)
