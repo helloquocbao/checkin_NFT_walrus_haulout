@@ -183,7 +183,7 @@ export default function Create() {
               });
 
               const fields = nftObject.data?.content?.fields;
-
+              console.log("Minted Memory NFT details:", fields);
               setNftInfo({
                 id: createdObject.objectId,
                 name: fields?.name || inputText || "My Memory",
