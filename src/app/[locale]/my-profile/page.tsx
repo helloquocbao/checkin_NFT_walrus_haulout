@@ -8,26 +8,30 @@ import {
   hasProfile,
   mintProfile,
   updateProfile,
+  getUserMemoryNFTs,
+  getProfileBadges,
 } from "@/services/profileService";
-import { getAllLocations } from "@/services/locationService";
 import { useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 
 interface Badge {
   location_id: number;
+  location_name: string;
+  image_url: string;
   rarity: number;
   perfection: number;
+  created_at: string;
 }
 
-interface Location {
-  id: number;
+interface MemoryNFT {
+  id: string;
   name: string;
-  description: string;
-  latitude: number;
-  longitude: number;
-  imageCommon: string;
-  imageRare: string;
-  imageEpic: string;
-  imageLegendary: string;
+  content: string;
+  image_url: string;
+  latitude: string;
+  longitude: string;
+  rarity: number;
+  perfection: number;
+  created_at: string;
 }
 
 interface ProfileData {
@@ -44,7 +48,8 @@ export default function MyProfilePage() {
 
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  const [locations, setLocations] = useState<Location[]>([]);
+  const [memoryNFTs, setMemoryNFTs] = useState<MemoryNFT[]>([]);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [minting, setMinting] = useState(false);
   const [updating, setUpdating] = useState(false);
 
@@ -60,10 +65,6 @@ export default function MyProfilePage() {
     const loadData = async () => {
       try {
         setLoading(true);
-
-        // Load all locations
-        const locationsData = await getAllLocations();
-        setLocations(locationsData as Location[]);
 
         // Load profile if wallet connected
         if (currentAccount?.address) {
@@ -86,6 +87,19 @@ export default function MyProfilePage() {
                 bio: profileInfo.bio,
                 avatarUrl: profileInfo.avatarUrl,
               });
+
+              // Load badges from claimed_badges table
+              const badges = await getProfileBadges(profile.data.objectId);
+              console.log("Loaded badges:", badges);
+              setProfileData({
+                ...profileInfo,
+                badges: badges as Badge[],
+              });
+
+              // Load user's memory NFTs
+              const nfts = await getUserMemoryNFTs(currentAccount.address);
+              console.log("Loaded memory NFTs:", nfts);
+              setMemoryNFTs(nfts);
             }
           }
         }
@@ -190,7 +204,10 @@ export default function MyProfilePage() {
     }
   };
 
-  // Get rarity name
+  // Handle image load error - prevent infinite loop
+  const handleImageError = (nftId: string) => {
+    setFailedImages((prev) => new Set(prev).add(nftId));
+  };
   const getRarityName = (rarity: number) => {
     switch (rarity) {
       case 0:
@@ -219,28 +236,6 @@ export default function MyProfilePage() {
         return "text-yellow-600 bg-yellow-100";
       default:
         return "text-gray-600 bg-gray-100";
-    }
-  };
-
-  // Get location by ID
-  const getLocationById = (locationId: number) => {
-    return locations.find((loc) => loc.id === locationId);
-  };
-
-  // Get location image based on rarity
-  const getLocationImage = (location: Location, rarity?: number) => {
-    if (rarity === undefined) return location.imageCommon;
-    switch (rarity) {
-      case 0:
-        return location.imageCommon;
-      case 1:
-        return location.imageRare;
-      case 2:
-        return location.imageEpic;
-      case 3:
-        return location.imageLegendary;
-      default:
-        return location.imageCommon;
     }
   };
 
@@ -447,11 +442,26 @@ export default function MyProfilePage() {
   // 3. WALLET + HAS PROFILE - Show profile view + update form
   // ============================================
   return (
-    <div className="min-h-screen bg-white pt-20 py-12">
-      <div className="max-w-6xl mx-auto px-4">
-        {/* Profile Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-8 mb-8 text-blue-50">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <section className="relative pb-10 pt-20 md:pt-32 h-1527">
+      <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 block dark:hidden h-full">
+        <img
+          src="/images/gradient.jpg"
+          alt="gradient"
+          className="h-full w-full"
+        />
+      </picture>
+      <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 hidden dark:block">
+        <img
+          src="/images/gradient_dark.jpg"
+          alt="gradient dark"
+          className="h-full w-full"
+        />
+      </picture>
+
+      <div className=" container mx-auto">
+        {/* ============ 1. PROFILE HEADER ============ */}
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg p-8 text-blue-50">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {/* Avatar */}
             <div className="flex justify-center md:justify-start">
               {profileData.avatarUrl ? (
@@ -459,28 +469,36 @@ export default function MyProfilePage() {
                 <img
                   src={profileData.avatarUrl}
                   alt={profileData.name}
-                  className="w-32 h-32 rounded-full object-cover border-4 border-blue-50"
+                  className="w-32 h-32 rounded-full object-cover border-4 border-blue-50 shadow-lg"
                 />
               ) : (
-                <div className="w-32 h-32 rounded-full bg-blue-400 flex items-center justify-center text-5xl">
+                <div className="w-32 h-32 rounded-full bg-blue-400 flex items-center justify-center text-5xl shadow-lg">
                   👤
                 </div>
               )}
             </div>
 
             {/* Profile Info */}
-            <div className="md:col-span-2">
+            <div className="md:col-span-3">
               <h1 className="text-4xl font-bold mb-2">{profileData.name}</h1>
-              <p className="text-blue-100 mb-6 text-lg">{profileData.bio}</p>
-              <div className="grid grid-cols-3 gap-6">
-                <div>
-                  <div className="text-3xl font-bold">
+              <p className="text-blue-100 mb-6 text-lg leading-relaxed">
+                {profileData.bio}
+              </p>
+
+              {/* Stats */}
+              <div className="grid grid-cols-4 gap-4">
+                <div className="bg-blue-400 bg-opacity-30 rounded-lg p-3 backdrop-blur">
+                  <div className="text-2xl font-bold">
                     {profileData.badges.length}
                   </div>
-                  <div className="text-blue-100">Badges</div>
+                  <div className="text-xs text-blue-100">Badges</div>
                 </div>
-                <div>
-                  <div className="text-3xl font-bold">
+                <div className="bg-blue-400 bg-opacity-30 rounded-lg p-3 backdrop-blur">
+                  <div className="text-2xl font-bold">{memoryNFTs.length}</div>
+                  <div className="text-xs text-blue-100">Memories</div>
+                </div>
+                <div className="bg-blue-400 bg-opacity-30 rounded-lg p-3 backdrop-blur">
+                  <div className="text-2xl font-bold">
                     {(
                       profileData.badges.reduce(
                         (sum, b) => sum + b.perfection,
@@ -488,10 +506,10 @@ export default function MyProfilePage() {
                       ) / Math.max(profileData.badges.length, 1)
                     ).toFixed(0)}
                   </div>
-                  <div className="text-blue-100">Avg Perfection</div>
+                  <div className="text-xs text-blue-100">Avg Perf.</div>
                 </div>
-                <div>
-                  <div className="text-3xl font-bold">
+                <div className="bg-blue-400 bg-opacity-30 rounded-lg p-3 backdrop-blur">
+                  <div className="text-2xl font-bold">
                     {(
                       (profileData.badges.reduce(
                         (sum, b) => sum + b.perfection,
@@ -503,199 +521,310 @@ export default function MyProfilePage() {
                     ).toFixed(0)}
                     %
                   </div>
-                  <div className="text-blue-100">Overall Score</div>
+                  <div className="text-xs text-blue-100">Overall</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left: Badges Collection */}
-          <div className="lg:col-span-2">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              My Badges Collection ({profileData.badges.length})
+        {/* ============ 2. UPDATE PROFILE SIDEBAR ============ */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+          <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            ✏️ Update Profile
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Name
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Bio
+              </label>
+              <textarea
+                value={formData.bio}
+                onChange={(e) =>
+                  setFormData({ ...formData, bio: e.target.value })
+                }
+                rows={2}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Avatar URL
+              </label>
+              <input
+                type="url"
+                value={formData.avatarUrl}
+                onChange={(e) =>
+                  setFormData({ ...formData, avatarUrl: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 text-sm"
+              />
+            </div>
+            <button
+              onClick={handleUpdateProfile}
+              disabled={updating || !formData.name.trim()}
+              className={`w-full py-2 rounded-lg font-semibold text-sm transition-colors ${
+                updating || !formData.name.trim()
+                  ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                  : "bg-blue-500 text-blue-50 hover:bg-blue-600"
+              }`}
+            >
+              {updating ? "Updating..." : "Save Changes"}
+            </button>
+          </div>
+        </div>
+
+        {/* ============ 3. BADGES COLLECTION ============ */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+              🏆 My Badges Collection
+              <span className="text-lg bg-blue-100 text-blue-600 px-3 py-1 rounded-full">
+                {profileData.badges.length}
+              </span>
             </h2>
+            <Link
+              href="/claim-badge"
+              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-semibold"
+            >
+              + Claim More
+            </Link>
+          </div>
 
-            {profileData.badges.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {profileData.badges.map((badge, index) => {
-                  const location = getLocationById(badge.location_id);
-                  if (!location) return null;
+          {profileData.badges.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {profileData.badges.map((badge, index) => (
+                <Link
+                  key={index}
+                  href={`/location/${badge.location_id}`}
+                  className="group"
+                >
+                  <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all hover:scale-105 border border-gray-200">
+                    {/* Image */}
+                    <div className="relative h-48 overflow-hidden bg-gray-200">
+                      {badge.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={badge.image_url}
+                          alt={badge.location_name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              "https://via.placeholder.com/300?text=Badge";
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-4xl">
+                          🏆
+                        </div>
+                      )}
 
-                  return (
-                    <Link
-                      key={index}
-                      href={`/location/${badge.location_id}`}
-                      className="group"
-                    >
-                      <div className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-                        {/* Image */}
-                        <div className="relative h-48">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={getLocationImage(location, badge.rarity)}
-                            alt={location.name}
-                            className="w-full h-full object-cover"
-                          />
+                      {/* Rarity Badge */}
+                      <div
+                        className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold ${getRarityColor(
+                          badge.rarity
+                        )} shadow-lg`}
+                      >
+                        {getRarityName(badge.rarity)}
+                      </div>
 
-                          {/* Rarity Badge */}
-                          <div
-                            className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold ${getRarityColor(
-                              badge.rarity
-                            )}`}
-                          >
-                            {getRarityName(badge.rarity)}
+                      {/* Location ID */}
+                      <div className="absolute top-3 left-3 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-semibold">
+                        Location #{badge.location_id}
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <div className="p-4">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1">
+                        {badge.location_name}
+                      </h3>
+
+                      {/* Stats */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded p-2 text-center border border-blue-200">
+                          <div className="text-sm font-bold text-blue-600">
+                            {badge.perfection}
                           </div>
-
-                          {/* Location ID */}
-                          <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-gray-100 px-2 py-1 rounded text-sm">
-                            #{badge.location_id}
+                          <div className="text-xs text-blue-500 font-medium">
+                            Perfection
                           </div>
                         </div>
-
-                        {/* Info */}
-                        <div className="p-4">
-                          <h3 className="text-lg font-bold text-gray-900 mb-1">
-                            {location.name}
-                          </h3>
-                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                            {location.description}
-                          </p>
-
-                          {/* Stats */}
-                          <div className="grid grid-cols-3 gap-2">
-                            <div className="bg-blue-50 rounded p-2 text-center">
-                              <div className="text-xs text-blue-600 font-semibold">
-                                {badge.perfection}
-                              </div>
-                              <div className="text-xs text-blue-500">
-                                Perfection
-                              </div>
-                            </div>
-                            <div className="bg-green-50 rounded p-2 text-center">
-                              <div className="text-xs text-green-600 font-semibold">
-                                {((badge.perfection / 1000) * 100).toFixed(0)}%
-                              </div>
-                              <div className="text-xs text-green-500">
-                                Score
-                              </div>
-                            </div>
-                            <div className="bg-purple-50 rounded p-2 text-center">
-                              <div className="text-xs text-purple-600 font-semibold">
-                                ⭐
-                              </div>
-                              <div className="text-xs text-purple-500">
-                                Badge
-                              </div>
-                            </div>
+                        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded p-2 text-center border border-green-200">
+                          <div className="text-sm font-bold text-green-600">
+                            {((badge.perfection / 1000) * 100).toFixed(0)}%
+                          </div>
+                          <div className="text-xs text-green-500 font-medium">
+                            Score
+                          </div>
+                        </div>
+                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded p-2 text-center border border-purple-200">
+                          <div className="text-sm font-bold text-purple-600">
+                            ⭐
+                          </div>
+                          <div className="text-xs text-purple-500 font-medium">
+                            Badge
                           </div>
                         </div>
                       </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                <div className="text-4xl mb-4">🏆</div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No badges yet
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  Start collecting badges by visiting locations!
-                </p>
-                <Link
-                  href="/claim-badge"
-                  className="inline-flex items-center px-4 py-2 bg-blue-500 text-blue-50 rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                  Explore Locations
+                    </div>
+                  </div>
                 </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Right: Update Profile Form */}
-          <div>
-            <div className="bg-white rounded-lg shadow-lg p-6 sticky top-32">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">
-                Update Profile
-              </h3>
-
-              <div className="space-y-4">
-                {/* Name */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">
-                    Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 text-sm"
-                  />
-                </div>
-
-                {/* Bio */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">
-                    Bio
-                  </label>
-                  <textarea
-                    value={formData.bio}
-                    onChange={(e) =>
-                      setFormData({ ...formData, bio: e.target.value })
-                    }
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 text-sm"
-                  />
-                </div>
-
-                {/* Avatar URL */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">
-                    Avatar URL
-                  </label>
-                  <input
-                    type="url"
-                    value={formData.avatarUrl}
-                    onChange={(e) =>
-                      setFormData({ ...formData, avatarUrl: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 text-sm"
-                  />
-                </div>
-
-                {/* Update Button */}
-                <button
-                  onClick={handleUpdateProfile}
-                  disabled={updating || !formData.name.trim()}
-                  className={`w-full py-2 rounded-lg font-semibold text-sm transition-colors ${
-                    updating || !formData.name.trim()
-                      ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                      : "bg-blue-500 text-blue-50 hover:bg-blue-600"
-                  }`}
-                >
-                  {updating ? "Updating..." : "Update Profile"}
-                </button>
-              </div>
-
-              {/* Actions */}
-              <div className="mt-6 space-y-2 border-t border-gray-200 pt-6">
-                <Link
-                  href="/claim-badge"
-                  className="block w-full text-center px-4 py-2 bg-blue-500 text-blue-50 rounded-lg hover:bg-blue-600 font-semibold transition-colors text-sm"
-                >
-                  Claim More Badges
-                </Link>
-              </div>
+              ))}
             </div>
+          ) : (
+            <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+              <div className="text-5xl mb-4">🏆</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No badges yet
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Start your journey by visiting locations and claiming badges!
+              </p>
+              <Link
+                href="/claim-badge"
+                className="inline-flex items-center px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold"
+              >
+                Explore Locations
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* ============ 4. MEMORY NFTs COLLECTION ============ */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+              📸 My Memory NFTs
+              <span className="text-lg bg-purple-100 text-purple-600 px-3 py-1 rounded-full">
+                {memoryNFTs.length}
+              </span>
+            </h2>
+            <Link
+              href="/create"
+              className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-semibold"
+            >
+              + Mint Memory
+            </Link>
           </div>
+
+          {memoryNFTs.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {memoryNFTs.map((nft) => (
+                <div
+                  key={nft.id}
+                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all border border-gray-200"
+                >
+                  {/* Image */}
+                  <div className="relative h-48 overflow-hidden bg-gray-200">
+                    {nft.image_url && !failedImages.has(nft.id) ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={nft.image_url}
+                        alt={nft.name}
+                        className="w-full h-full object-cover hover:scale-110 transition-transform"
+                        onError={() => handleImageError(nft.id)}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-gray-100 to-gray-200">
+                        📸
+                      </div>
+                    )}
+
+                    {/* Rarity Badge */}
+                    <div
+                      className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg ${
+                        nft.rarity === 0
+                          ? "bg-gray-500"
+                          : nft.rarity === 1
+                          ? "bg-blue-500"
+                          : nft.rarity === 2
+                          ? "bg-purple-500"
+                          : "bg-yellow-500"
+                      }`}
+                    >
+                      {["Common", "Rare", "Epic", "Legendary"][nft.rarity]}
+                    </div>
+                  </div>
+
+                  {/* Info */}
+                  <div className="p-4">
+                    <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1">
+                      {nft.name}
+                    </h3>
+                    <p className="text-xs text-gray-600 mb-3 line-clamp-2">
+                      {nft.content}
+                    </p>
+
+                    {/* Location & Stats */}
+                    <div className="mb-3 text-xs text-gray-500">
+                      📍 {nft.latitude}, {nft.longitude}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded p-2 text-center border border-pink-200">
+                        <div className="text-sm font-bold text-pink-600">
+                          {nft.perfection}
+                        </div>
+                        <div className="text-xs text-pink-500 font-medium">
+                          Perfection
+                        </div>
+                      </div>
+                      <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded p-2 text-center border border-yellow-200">
+                        <div className="text-sm font-bold text-yellow-600">
+                          {((nft.perfection / 1000) * 100).toFixed(0)}%
+                        </div>
+                        <div className="text-xs text-yellow-500 font-medium">
+                          Quality
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* View on Explorer */}
+                    <a
+                      href={`https://suiexplorer.com/object/${nft.id}?network=testnet`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 block w-full text-center py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded transition-colors border border-blue-200"
+                    >
+                      View on Sui Explorer →
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border-2 border-dashed border-purple-300">
+              <div className="text-5xl mb-4">📸</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No memories yet
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Capture and mint your first memory NFT!
+              </p>
+              <Link
+                href="/create"
+                className="inline-flex items-center px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-semibold"
+              >
+                Create Memory
+              </Link>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

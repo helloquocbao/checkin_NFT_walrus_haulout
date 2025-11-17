@@ -46,8 +46,7 @@ export default function Collection_items() {
     .filter((f) => f.latitude && f.longitude);
 
   return (
-    <section className="relative pb-10 pt-20 md:pt-32">
-      {/* background */}
+    <section className="relative pb-10 pt-20 md:pt-32 h-1527">
       <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 block dark:hidden h-full">
         <img
           src="/images/gradient.jpg"

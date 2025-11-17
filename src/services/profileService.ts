@@ -324,3 +324,83 @@ export const getActualVoteCount = async (profileOwnerAddress: string) => {
     return 0;
   }
 };
+
+/**
+ * Get all memory NFTs owned by a user
+ */
+export const getUserMemoryNFTs = async (userAddress: string) => {
+  try {
+    // Query owned objects that are MemoryNFT type
+    const objects = await suiClient.getOwnedObjects({
+      owner: userAddress,
+      filter: {
+        StructType: `${CONTRACT_CONFIG.PACKAGE_ID}::memory_nft::MemoryNFT`,
+      },
+      options: {
+        showContent: true,
+      },
+    });
+
+    const userNFTs = [];
+
+    for (const obj of objects.data) {
+      try {
+        if (obj.data?.content) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const fields = (obj.data.content as any).fields;
+          userNFTs.push({
+            id: obj.data.objectId,
+            name: fields.name || "",
+            content: fields.content || "",
+            image_url: fields.image_url || "",
+            latitude: fields.latitude || "0",
+            longitude: fields.longitude || "0",
+            rarity: fields.rarity || 0,
+            perfection: fields.perfection || 0,
+            created_at: fields.created_at || new Date().toISOString(),
+          });
+        }
+      } catch (error) {
+        console.error(`Failed to fetch NFT:`, error);
+      }
+    }
+
+    return userNFTs;
+  } catch (error) {
+    console.error("Error getting user memory NFTs:", error);
+    return [];
+  }
+};
+
+/**
+ * Get profile badges from claimed_badges vector
+ */
+export const getProfileBadges = async (profileId: string) => {
+  try {
+    const profile = await suiClient.getObject({
+      id: profileId,
+      options: { showContent: true },
+    });
+
+    if (!profile.data?.content) return [];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fields = (profile.data.content as any).fields;
+    const claimedBadges = fields.claimed_badges || [];
+
+    if (!Array.isArray(claimedBadges)) return [];
+
+    // Convert vector of ClaimedBadgeInfo to Badge format
+    return claimedBadges.map((badge: any) => ({
+      location_id: Number(badge.location_id) || 0,
+      location_name: badge.location_name || "",
+      image_url: badge.image_url || "",
+      rarity: badge.rarity || 0,
+      perfection: Number(badge.perfection) || 0,
+      created_at: badge.created_at || "",
+    }));
+  } catch (error) {
+    console.error("Error getting profile badges:", error);
+    return [];
+  }
+};

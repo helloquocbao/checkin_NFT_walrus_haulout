@@ -237,212 +237,264 @@ export default function LocationDetailPage() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center pt-32">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading location...</p>
+      <section className="relative pb-10 pt-20 md:pt-32 h-1527">
+        <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 block dark:hidden h-full">
+          <img
+            src="/images/gradient.jpg"
+            alt="gradient"
+            className="h-full w-full"
+          />
+        </picture>
+        <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 hidden dark:block">
+          <img
+            src="/images/gradient_dark.jpg"
+            alt="gradient dark"
+            className="h-full w-full"
+          />
+        </picture>
+        <div className="min-h-screen flex items-center justify-center pt-32">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading location...</p>
+          </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   // No location found
   if (!location) {
     return (
-      <div className="min-h-screen flex items-center justify-center pt-32">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Location Not Found
-          </h2>
-          <p className="text-gray-600 mb-4">
-            The location you&apos;re looking for doesn&apos;t exist.
-          </p>
-          <Link
-            href="/claim-badge"
-            className="bg-blue-500 text-blue-50 px-6 py-2 rounded-lg hover:bg-blue-600 inline-block"
-          >
-            Back to Locations
-          </Link>
+      <section className="relative pb-10 pt-20 md:pt-32 h-1527">
+        <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 block dark:hidden h-full">
+          <img
+            src="/images/gradient.jpg"
+            alt="gradient"
+            className="h-full w-full"
+          />
+        </picture>
+        <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 hidden dark:block">
+          <img
+            src="/images/gradient_dark.jpg"
+            alt="gradient dark"
+            className="h-full w-full"
+          />
+        </picture>
+        <div className="min-h-screen flex items-center justify-center pt-32">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Location Not Found
+            </h2>
+            <p className="text-gray-600 mb-4">
+              The location you&apos;re looking for doesn&apos;t exist.
+            </p>
+            <Link
+              href="/claim-badge"
+              className="bg-blue-500 text-blue-50 px-6 py-2 rounded-lg hover:bg-blue-600 inline-block"
+            >
+              Back to Locations
+            </Link>
+          </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 pt-32">
-      <div className="w-full max-w-xl mx-auto px-4">
-        {/* Back Button */}
-        <div className="mb-6 text-center">
-          <Link
-            href="/claim-badge"
-            className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-2 text-lg font-semibold"
-          >
-            ← Back to All Locations
-          </Link>
-        </div>
-
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          <div className="relative h-64 md:h-80">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={getLocationImage(userBadge?.rarity)}
-              alt={location.name}
-              className="w-full h-full object-cover"
-            />
-
-            {/* Badge Overlay */}
-            <div className="absolute top-4 right-4">
-              {hasBadge ? (
-                <div
-                  className={`px-4 py-2 rounded-full text-sm font-bold border shadow ${getRarityColor(
-                    userBadge.rarity
-                  )}`}
-                >
-                  ✓ {getRarityName(userBadge.rarity)} Badge
-                </div>
-              ) : (
-                <div className="bg-red-100 text-red-600 px-4 py-2 rounded-full text-sm font-bold border border-red-300 shadow">
-                  Not Claimed
-                </div>
-              )}
-            </div>
-            {/* Location ID */}
-            <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-gray-100 px-3 py-2 rounded text-sm font-semibold shadow">
-              #{location.id}
-            </div>
+    <section className="relative pb-10 pt-20 md:pt-32 h-1527">
+      <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 block dark:hidden h-full">
+        <img
+          src="/images/gradient.jpg"
+          alt="gradient"
+          className="h-full w-full"
+        />
+      </picture>
+      <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 hidden dark:block">
+        <img
+          src="/images/gradient_dark.jpg"
+          alt="gradient dark"
+          className="h-full w-full"
+        />
+      </picture>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 pt-32">
+        <div className="w-full max-w-xl mx-auto px-4">
+          {/* Back Button */}
+          <div className="mb-6 text-center">
+            <Link
+              href="/claim-badge"
+              className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-2 text-lg font-semibold"
+            >
+              ← Back to All Locations
+            </Link>
           </div>
 
-          <div className="p-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
-              {location.name}
-            </h1>
-            <p className="text-gray-600 text-center mb-4 text-lg">
-              {location.description}
-            </p>
+          {/* Card */}
+          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="relative h-64 md:h-80">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getLocationImage(userBadge?.rarity)}
+                alt={location.name}
+                className="w-full h-full object-cover"
+              />
 
-            {/* Coordinates */}
-            <div className="flex items-center justify-center gap-2 text-gray-500 mb-6">
-              <span className="text-lg">📍</span>
-              <span className="text-sm">
-                Lat: {location.latitude.toFixed(6)} • Long:{" "}
-                {location.longitude.toFixed(6)}
-              </span>
-            </div>
-
-            {/* Current Badge Info - block nổi bật */}
-            {hasBadge && (
-              <div className="mb-6 p-5 bg-gradient-to-br from-green-50 to-blue-50 border-2 border-green-300 rounded-xl shadow text-center">
-                <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-2">
+              {/* Badge Overlay */}
+              <div className="absolute top-4 right-4">
+                {hasBadge ? (
                   <div
-                    className={`px-4 py-2 rounded-full text-sm font-bold border ${getRarityColor(
+                    className={`px-4 py-2 rounded-full text-sm font-bold border shadow ${getRarityColor(
                       userBadge.rarity
                     )}`}
                   >
-                    {getRarityName(userBadge.rarity)}
+                    ✓ {getRarityName(userBadge.rarity)} Badge
                   </div>
-                  <div className="text-green-700 font-semibold">
-                    Perfection: {userBadge.perfection}/1000
-                  </div>
-                  <div className="text-blue-700 font-semibold">
-                    Score: {((userBadge.perfection / 1000) * 100).toFixed(1)}%
-                  </div>
-                </div>
-                <div className="text-green-800 font-semibold">
-                  You have claimed this badge!
-                </div>
-              </div>
-            )}
-
-            {/* Rarity Information */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 text-center">
-                Badge Rarity Chances
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-xl font-bold text-gray-600">60%</div>
-                  <div className="text-sm text-gray-500">Common</div>
-                </div>
-                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <div className="text-xl font-bold text-blue-600">25%</div>
-                  <div className="text-sm text-blue-500">Rare</div>
-                </div>
-                <div className="text-center p-3 bg-purple-50 rounded-lg">
-                  <div className="text-xl font-bold text-purple-600">12%</div>
-                  <div className="text-sm text-purple-500">Epic</div>
-                </div>
-                <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                  <div className="text-xl font-bold text-yellow-600">3%</div>
-                  <div className="text-sm text-yellow-500">Legendary</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col md:flex-row gap-4 mb-2">
-              <button
-                onClick={handleClaimBadge}
-                disabled={claiming}
-                className={`flex-1 py-3 rounded-lg font-semibold text-lg transition-colors ${
-                  claiming
-                    ? "bg-blue-300 text-blue-900 cursor-not-allowed"
-                    : hasBadge
-                    ? "bg-green-500 text-green-50 hover:bg-green-600"
-                    : "bg-blue-500 text-blue-50 hover:bg-blue-600"
-                }`}
-              >
-                {claiming
-                  ? "Claiming..."
-                  : hasBadge
-                  ? "Reclaim Badge (0.01 SUI)"
-                  : "Claim Badge (0.01 SUI)"}
-              </button>
-              <Link
-                href="/my-profile"
-                className="flex-1 py-3 bg-gray-500 text-gray-50 rounded-lg hover:bg-gray-600 text-center font-semibold"
-              >
-                View My Profile
-              </Link>
-            </div>
-
-            {/* Help Text */}
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
-              <h4 className="font-semibold text-blue-800 mb-2">
-                {hasBadge
-                  ? "Want to Improve Your Badge?"
-                  : "How Badge Claiming Works"}
-              </h4>
-              <ul className="text-sm text-blue-700 space-y-1 text-left inline-block">
-                {hasBadge ? (
-                  <>
-                    <li>
-                      • You can reclaim this badge to potentially get better
-                      rarity
-                    </li>
-                    <li>
-                      • Each reclaim costs 0.01 SUI and gives you a new random
-                      badge
-                    </li>
-                    <li>• Your old badge will be replaced with the new one</li>
-                    <li>• Higher rarity badges are more valuable and rare</li>
-                  </>
                 ) : (
-                  <>
-                    <li>
-                      • Each claim costs 0.01 SUI and gives you a random rarity
-                      badge
-                    </li>
-                    <li>• Common badges are most frequent (60% chance)</li>
-                    <li>• Legendary badges are extremely rare (3% chance)</li>
-                    <li>• Each badge has a unique perfection score (0-1000)</li>
-                  </>
+                  <div className="bg-red-100 text-red-600 px-4 py-2 rounded-full text-sm font-bold border border-red-300 shadow">
+                    Not Claimed
+                  </div>
                 )}
-              </ul>
+              </div>
+              {/* Location ID */}
+              <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-gray-100 px-3 py-2 rounded text-sm font-semibold shadow">
+                #{location.id}
+              </div>
+            </div>
+
+            <div className="p-8">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
+                {location.name}
+              </h1>
+              <p className="text-gray-600 text-center mb-4 text-lg">
+                {location.description}
+              </p>
+
+              {/* Coordinates */}
+              <div className="flex items-center justify-center gap-2 text-gray-500 mb-6">
+                <span className="text-lg">📍</span>
+                <span className="text-sm">
+                  Lat: {location.latitude.toFixed(6)} • Long:{" "}
+                  {location.longitude.toFixed(6)}
+                </span>
+              </div>
+
+              {/* Current Badge Info - block nổi bật */}
+              {hasBadge && (
+                <div className="mb-6 p-5 bg-gradient-to-br from-green-50 to-blue-50 border-2 border-green-300 rounded-xl shadow text-center">
+                  <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-2">
+                    <div
+                      className={`px-4 py-2 rounded-full text-sm font-bold border ${getRarityColor(
+                        userBadge.rarity
+                      )}`}
+                    >
+                      {getRarityName(userBadge.rarity)}
+                    </div>
+                    <div className="text-green-700 font-semibold">
+                      Perfection: {userBadge.perfection}/1000
+                    </div>
+                    <div className="text-blue-700 font-semibold">
+                      Score: {((userBadge.perfection / 1000) * 100).toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="text-green-800 font-semibold">
+                    You have claimed this badge!
+                  </div>
+                </div>
+              )}
+
+              {/* Rarity Information */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 text-center">
+                  Badge Rarity Chances
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-xl font-bold text-gray-600">60%</div>
+                    <div className="text-sm text-gray-500">Common</div>
+                  </div>
+                  <div className="text-center p-3 bg-blue-50 rounded-lg">
+                    <div className="text-xl font-bold text-blue-600">25%</div>
+                    <div className="text-sm text-blue-500">Rare</div>
+                  </div>
+                  <div className="text-center p-3 bg-purple-50 rounded-lg">
+                    <div className="text-xl font-bold text-purple-600">12%</div>
+                    <div className="text-sm text-purple-500">Epic</div>
+                  </div>
+                  <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                    <div className="text-xl font-bold text-yellow-600">3%</div>
+                    <div className="text-sm text-yellow-500">Legendary</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col md:flex-row gap-4 mb-2">
+                <button
+                  onClick={handleClaimBadge}
+                  disabled={claiming}
+                  className={`flex-1 py-3 rounded-lg font-semibold text-lg transition-colors ${
+                    claiming
+                      ? "bg-blue-300 text-blue-900 cursor-not-allowed"
+                      : hasBadge
+                      ? "bg-green-500 text-green-50 hover:bg-green-600"
+                      : "bg-blue-500 text-blue-50 hover:bg-blue-600"
+                  }`}
+                >
+                  {claiming
+                    ? "Claiming..."
+                    : hasBadge
+                    ? "Reclaim Badge (0.01 SUI)"
+                    : "Claim Badge (0.01 SUI)"}
+                </button>
+                <Link
+                  href="/my-profile"
+                  className="flex-1 py-3 bg-gray-500 text-gray-50 rounded-lg hover:bg-gray-600 text-center font-semibold"
+                >
+                  View My Profile
+                </Link>
+              </div>
+
+              {/* Help Text */}
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                <h4 className="font-semibold text-blue-800 mb-2">
+                  {hasBadge
+                    ? "Want to Improve Your Badge?"
+                    : "How Badge Claiming Works"}
+                </h4>
+                <ul className="text-sm text-blue-700 space-y-1 text-left inline-block">
+                  {hasBadge ? (
+                    <>
+                      <li>
+                        • You can reclaim this badge to potentially get better
+                        rarity
+                      </li>
+                      <li>
+                        • Each reclaim costs 0.01 SUI and gives you a new random
+                        badge
+                      </li>
+                      <li>
+                        • Your old badge will be replaced with the new one
+                      </li>
+                      <li>• Higher rarity badges are more valuable and rare</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>
+                        • Each claim costs 0.01 SUI and gives you a random
+                        rarity badge
+                      </li>
+                      <li>• Common badges are most frequent (60% chance)</li>
+                      <li>• Legendary badges are extremely rare (3% chance)</li>
+                      <li>
+                        • Each badge has a unique perfection score (0-1000)
+                      </li>
+                    </>
+                  )}
+                </ul>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
