@@ -9,6 +9,7 @@ use sui::transfer_policy::{Self, TransferPolicy};
 use sui::package;
 use sui::clock::{Self, Clock};
 use sui::tx_context::sender;
+use sui::table::{Self, Table};
 
 /// 🏪 Memory Marketplace Registry
 public struct MemoryMarketplaceRegistry has key {
@@ -16,6 +17,7 @@ public struct MemoryMarketplaceRegistry has key {
     deployer: address,
     total_listings: u64,
     royalty_bps: u64, // Creator royalty (basis points)
+    user_kiosks: Table<address, ID>, // Track 1 kiosk per user
 }
 
 /// 🎫 One-time witness
@@ -70,6 +72,7 @@ fun init(otw: MEMORY_MARKETPLACE, ctx: &mut tx_context::TxContext) {
         deployer,
         total_listings: 0,
         royalty_bps: 250, // 2.5% royalty cho creator
+        user_kiosks: table::new<address, ID>(ctx),
     };
     
     // 📤 Transfer objects
@@ -77,6 +80,32 @@ fun init(otw: MEMORY_MARKETPLACE, ctx: &mut tx_context::TxContext) {
     transfer::public_share_object(policy);
     transfer::public_transfer(policy_cap, deployer);
     transfer::share_object(registry);
+}
+
+/// 🆕 Helper function to create a new Kiosk
+/// Creates and transfers Kiosk + KioskOwnerCap to sender
+/// Giới hạn: User chỉ có thể tạo 1 kiosk duy nhất
+public fun create_kiosk(
+    registry: &mut MemoryMarketplaceRegistry,
+    ctx: &mut TxContext
+) {
+    let user = sender(ctx);
+    
+    // Check: User đã có kiosk chưa?
+    assert!(!table::contains(&registry.user_kiosks, user), 1001); // Error: Already has a kiosk
+    
+    // Create kiosk
+    let (kiosk, cap) = kiosk::new(ctx);
+    let kiosk_id = object::id(&kiosk);
+    
+    // Track user's kiosk in registry
+    table::add(&mut registry.user_kiosks, user, kiosk_id);
+    
+    // Transfer cap to user
+    transfer::public_transfer(cap, user);
+    
+    // Share kiosk
+    transfer::public_share_object(kiosk);
 }
 
 /// 📤 List Memory NFT để bán

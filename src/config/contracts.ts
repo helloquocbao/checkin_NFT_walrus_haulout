@@ -11,32 +11,37 @@ export const CONTRACT_CONFIG = {
   // Package ID - Update after deployment
   PACKAGE_ID:
     process.env.NEXT_PUBLIC_PACKAGE_ID ||
-    "0xc10cf0154a316d7307f954792477ec3c1390207b2798eac7d5a87c30f163d1a6",
+    "0xfba7b4654cc5a4c83ae44ee86932dcdf132116d0ce62533cb5592838ba2ae2fc",
 
   // ==================== Profile & Badge System ====================
 
   // Profile Registry - Shared object for profile management
   PROFILE_REGISTRY_ID:
     process.env.NEXT_PUBLIC_PROFILE_REGISTRY_ID ||
-    "0xe1a85238e3233a1a0d8e71cff8259a40c043320b948c1d715bfd2df4279550f4",
+    "0x46163727d7de4419c1e4b32a82f7e63952fa1fe8a943c1f9674770115e470b56",
 
   // Voter Registry - Tracks verification votes
   VOTER_REGISTRY_ID:
     process.env.NEXT_PUBLIC_VOTER_REGISTRY_ID ||
-    "0x30e4e505640048e565bf8613031514a3d2aa1cea4269b32e9a9a27cafeeee722",
+    "0xcef4dbf8dbf8249f4830b2947068ed7a1910764bd78a4f76f5596162b62ee6a3",
 
   // Location Registry - Manages badge locations
   LOCATION_REGISTRY_ID:
     process.env.NEXT_PUBLIC_LOCATION_REGISTRY_ID ||
-    "0xe77df3774dfb378923976854c14fd6c982a4c1e3a99d7bdb25b674215c9ccf28",
+    "0xe06b807d1b6ab099ade5e7cbfff754dfb6324ce195177bea0e98e62c3c2d36e2",
 
   // Memory Registry - Manages memory NFTs
   MEMORY_REGISTRY_ID:
     process.env.NEXT_PUBLIC_MEMORY_REGISTRY_ID ||
-    "0x93b97ec541aac143027c3856f5dd79a1b64f1310c9c486ab76de0d8db737e6fa",
+    "0x8bb54cf5da4ff467b215841406fb0784a620fc54934ff1323972ddfc816e98a2",
   MEMORY_MAKET_PLACE_ID:
     process.env.NEXT_PUBLIC_MEMORY_MAKET_PLACE_ID ||
-    "0x69a0072d470c9b7168739d0db7f44d219989b192cc4f8cdcc52468373dbc315f",
+    "0x6aa7e198a89775d86155de2c05785a58cb7a9258f942cdc670adfae40af0191d",
+
+  // Transfer Policy for Memory NFT
+  TRANSFER_POLICY_ID:
+    process.env.NEXT_PUBLIC_TRANSFER_POLICY_ID ||
+    "0x829fe97f2a5529e59e2fca291ccf6078559168672ae8e593dcd00d4cfd233fbd",
 
   // ==================== System Objects ====================
 

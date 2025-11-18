@@ -404,3 +404,213 @@ export const getProfileBadges = async (profileId: string) => {
     return [];
   }
 };
+
+/**
+ * List Memory NFT to Kiosk for selling
+ * User needs to have a Kiosk first and its KioskOwnerCap
+ */
+export const listMemoryNFTToKiosk = async (
+  kioskId: string,
+  kioskCapId: string,
+  memoryNFTId: string,
+  price: bigint
+) => {
+  const tx = new Transaction();
+
+  tx.moveCall({
+    target: `${CONTRACT_CONFIG.PACKAGE_ID}::memory_marketplace::list_memory`,
+    arguments: [
+      tx.object(CONTRACT_CONFIG.MEMORY_MAKET_PLACE_ID), // registry
+      tx.object(kioskId), // kiosk
+      tx.object(kioskCapId), // cap (KioskOwnerCap for kiosk ownership)
+      tx.object(memoryNFTId), // memory NFT to list
+      tx.pure.u64(price), // price
+      tx.object(CONTRACT_CONFIG.CLOCK_ID), // clock
+    ],
+  });
+
+  return tx;
+};
+
+/**
+ * Get user's Kiosk objects
+ */
+export const getUserKiosks = async (userAddress: string) => {
+  try {
+    const objects = await suiClient.getOwnedObjects({
+      owner: userAddress,
+      filter: {
+        StructType: "0x2::kiosk::Kiosk",
+      },
+      options: {
+        showContent: true,
+      },
+    });
+
+    return objects.data.map((obj) => ({
+      id: obj.data?.objectId || "",
+      ...obj.data?.content,
+    }));
+  } catch (error) {
+    console.error("Error getting user kiosks:", error);
+    return [];
+  }
+};
+
+/**
+ * Get user's KioskOwnerCap objects (needed to manage kiosk)
+ */
+export const getUserKioskCaps = async (userAddress: string) => {
+  try {
+    const objects = await suiClient.getOwnedObjects({
+      owner: userAddress,
+      filter: {
+        StructType: "0x2::kiosk::KioskOwnerCap",
+      },
+      options: {
+        showContent: true,
+      },
+    });
+
+    return objects.data.map((obj) => ({
+      id: obj.data?.objectId || "",
+      ...obj.data?.content,
+    }));
+  } catch (error) {
+    console.error("Error getting user kiosk caps:", error);
+    return [];
+  }
+};
+
+/**
+ * Create a new Kiosk for user
+ * Uses custom contract helper function for proper Move handling
+ * Enforces 1 kiosk per user via Table tracking
+ */
+export const createKiosk = async () => {
+  const tx = new Transaction();
+
+  tx.moveCall({
+    target: `${CONTRACT_CONFIG.PACKAGE_ID}::memory_marketplace::create_kiosk`,
+    arguments: [
+      tx.object(CONTRACT_CONFIG.MEMORY_MAKET_PLACE_ID), // registry
+    ],
+  });
+
+  return tx;
+};
+
+/**
+ * Get all Memory Listings from all kiosks
+ * Queries MemoryListing objects by event history
+ */
+export const getAllListings = async () => {
+  try {
+    // Query MemoryListed events to find all listings
+    const events = await suiClient.queryEvents({
+      query: {
+        MoveEventType: `${CONTRACT_CONFIG.PACKAGE_ID}::memory_marketplace::MemoryListed`,
+      },
+      limit: 100,
+      order: "descending",
+    });
+
+    const listings = [];
+
+    // For each event, try to get the listing object
+    for (const event of events.data) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const eventData = event.parsedJson as any;
+        if (eventData?.listing_id) {
+          const listing = await suiClient.getObject({
+            id: eventData.listing_id,
+            options: {
+              showContent: true,
+              showOwner: true,
+            },
+          });
+
+          if (listing.data?.content) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const fields = (listing.data.content as any).fields;
+            listings.push({
+              id: listing.data.objectId,
+              seller: fields.seller,
+              memoryId: fields.memory_id,
+              price: fields.price,
+              listedAt: fields.listed_at,
+              ...eventData,
+            });
+          }
+        }
+      } catch (err) {
+        // Skip if listing object not found
+        console.debug("Could not fetch listing object", err);
+      }
+    }
+
+    return listings;
+  } catch (error) {
+    console.error("Error getting all listings:", error);
+    return [];
+  }
+};
+
+/**
+ * Buy Memory NFT from marketplace
+ * User can either place in their kiosk or receive directly
+ */
+export const buyMemory = async (
+  listingId: string,
+  sellerKioskId: string,
+  buyerKioskId: string,
+  buyerCapId: string,
+  priceInMist: bigint
+) => {
+  const tx = new Transaction();
+
+  // Split payment coin
+  const [paymentCoin] = tx.splitCoins(tx.gas, [priceInMist]);
+
+  tx.moveCall({
+    target: `${CONTRACT_CONFIG.PACKAGE_ID}::memory_marketplace::buy_memory`,
+    arguments: [
+      tx.object(CONTRACT_CONFIG.MEMORY_MAKET_PLACE_ID), // registry
+      tx.object(listingId), // listing (will be consumed)
+      tx.object(sellerKioskId), // seller_kiosk
+      tx.object(buyerKioskId), // buyer_kiosk
+      tx.object(buyerCapId), // buyer_cap
+      tx.object(CONTRACT_CONFIG.TRANSFER_POLICY_ID), // policy
+      paymentCoin, // payment
+    ],
+  });
+
+  return tx;
+};
+
+/**
+ * Buy Memory NFT and receive directly (not in kiosk)
+ */
+export const buyMemoryDirect = async (
+  listingId: string,
+  sellerKioskId: string,
+  priceInMist: bigint
+) => {
+  const tx = new Transaction();
+
+  const [paymentCoin] = tx.splitCoins(tx.gas, [priceInMist]);
+
+  tx.moveCall({
+    target: `${CONTRACT_CONFIG.PACKAGE_ID}::memory_marketplace::buy_memory_direct`,
+    arguments: [
+      tx.object(CONTRACT_CONFIG.MEMORY_MAKET_PLACE_ID), // registry
+      tx.object(listingId), // listing (will be consumed)
+      tx.object(sellerKioskId), // seller_kiosk
+      tx.object(CONTRACT_CONFIG.TRANSFER_POLICY_ID), // policy
+      paymentCoin, // payment
+    ],
+  });
+
+  return tx;
+};

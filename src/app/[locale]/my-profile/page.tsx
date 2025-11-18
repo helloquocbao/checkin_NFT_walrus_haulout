@@ -10,6 +10,10 @@ import {
   updateProfile,
   getUserMemoryNFTs,
   getProfileBadges,
+  getUserKiosks,
+  getUserKioskCaps,
+  listMemoryNFTToKiosk,
+  createKiosk,
 } from "@/services/profileService";
 import { useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 
@@ -52,6 +56,9 @@ export default function MyProfilePage() {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [minting, setMinting] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [listingNFT, setListingNFT] = useState<MemoryNFT | null>(null);
+  const [listingPrice, setListingPrice] = useState("");
+  const [listingLoading, setListingLoading] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -207,6 +214,124 @@ export default function MyProfilePage() {
   // Handle image load error - prevent infinite loop
   const handleImageError = (nftId: string) => {
     setFailedImages((prev) => new Set(prev).add(nftId));
+  };
+
+  // List NFT to Kiosk
+  const handleListNFT = async () => {
+    if (!listingNFT || !listingPrice || !currentAccount?.address) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      setListingLoading(true);
+
+      // Get user's kiosks
+      const kiosks = await getUserKiosks(currentAccount.address);
+
+      // If no kiosk exists, ask user to create one
+      if (kiosks.length === 0) {
+        const shouldCreate = window.confirm(
+          "You don't have a Kiosk yet. Do you want to create one now?"
+        );
+
+        if (!shouldCreate) {
+          setListingLoading(false);
+          return;
+        }
+
+        // Create kiosk
+        alert("Creating your Kiosk...");
+        try {
+          const createKioskTx = await createKiosk();
+
+          signAndExecute(
+            { transaction: createKioskTx } as unknown as Parameters<
+              typeof signAndExecute
+            >[0],
+            {
+              onSuccess: async () => {
+                alert(
+                  "Kiosk created successfully! Please try listing your NFT again."
+                );
+                setListingNFT(null);
+                setListingPrice("");
+                setListingLoading(false);
+                // Refresh page to load new kiosk
+                setTimeout(() => window.location.reload(), 1000);
+              },
+              onError: (error) => {
+                console.error("Create kiosk failed:", error);
+                const errorMsg = error.message || String(error);
+                if (
+                  errorMsg.includes("rejected") ||
+                  errorMsg.includes("User rejected")
+                ) {
+                  alert("Transaction cancelled. You can try again anytime.");
+                } else {
+                  alert("Failed to create Kiosk: " + errorMsg);
+                }
+                setListingLoading(false);
+              },
+            }
+          );
+        } catch (txError) {
+          console.error("Error building kiosk transaction:", txError);
+          alert(
+            "Error building transaction: " +
+              (txError instanceof Error ? txError.message : String(txError))
+          );
+          setListingLoading(false);
+        }
+        return;
+      }
+
+      // Use first kiosk
+      const kioskId = kiosks[0]?.id || "";
+
+      // Get user's kiosk caps
+      const caps = await getUserKioskCaps(currentAccount.address);
+      const capId = caps[0]?.id || "";
+
+      if (!capId) {
+        alert(
+          "Error: Could not find your KioskOwnerCap. Please try creating kiosk again."
+        );
+        setListingLoading(false);
+        return;
+      }
+
+      // Price in MIST (multiply by 10^9 for SUI)
+      const priceInMist = BigInt(parseFloat(listingPrice) * 1e9);
+
+      // Build transaction using service function
+      const tx = await listMemoryNFTToKiosk(
+        kioskId,
+        capId,
+        listingNFT.id,
+        priceInMist
+      );
+
+      signAndExecute(
+        { transaction: tx } as unknown as Parameters<typeof signAndExecute>[0],
+        {
+          onSuccess: () => {
+            alert(`NFT "${listingNFT.name}" listed for ${listingPrice} SUI`);
+            setListingNFT(null);
+            setListingPrice("");
+          },
+          onError: (error) => {
+            console.error("List failed:", error);
+            alert("Failed to list NFT: " + error.message);
+            setListingLoading(false);
+          },
+        }
+      );
+    } catch (error) {
+      console.error("Error listing NFT:", error);
+      alert("Error: " + (error as Error).message);
+      setListingLoading(false);
+    }
   };
   const getRarityName = (rarity: number) => {
     switch (rarity) {
@@ -414,7 +539,7 @@ export default function MyProfilePage() {
                 className={`w-full py-3 rounded-lg font-semibold text-lg transition-colors ${
                   minting || !formData.name.trim()
                     ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                    : "bg-blue-500 text-blue-50 hover:bg-blue-600"
+                    : "bg-blue-500 text-gray-900 hover:bg-blue-600"
                 }`}
               >
                 {minting ? "Creating Profile..." : "Create Profile"}
@@ -579,7 +704,7 @@ export default function MyProfilePage() {
               className={`w-full py-2 rounded-lg font-semibold text-sm transition-colors ${
                 updating || !formData.name.trim()
                   ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                  : "bg-blue-500 text-blue-50 hover:bg-blue-600"
+                  : "bg-blue-500 text-gray-900 hover:bg-blue-600"
               }`}
             >
               {updating ? "Updating..." : "Save Changes"}
@@ -598,7 +723,7 @@ export default function MyProfilePage() {
             </h2>
             <Link
               href="/claim-badge"
-              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-semibold"
+              className="px-4 py-2 bg-green-500 text-gray-900 rounded-lg hover:bg-green-600 transition-colors font-semibold"
             >
               + Claim More
             </Link>
@@ -696,7 +821,7 @@ export default function MyProfilePage() {
               </p>
               <Link
                 href="/claim-badge"
-                className="inline-flex items-center px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold"
+                className="inline-flex items-center px-6 py-2 bg-blue-500 text-gray-900 rounded-lg hover:bg-blue-600 transition-colors font-semibold"
               >
                 Explore Locations
               </Link>
@@ -715,7 +840,7 @@ export default function MyProfilePage() {
             </h2>
             <Link
               href="/create"
-              className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-semibold"
+              className="px-4 py-2 bg-purple-500 text-gray-900 rounded-lg hover:bg-purple-600 transition-colors font-semibold"
             >
               + Mint Memory
             </Link>
@@ -746,14 +871,14 @@ export default function MyProfilePage() {
 
                     {/* Rarity Badge */}
                     <div
-                      className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg ${
+                      className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold text-gray-900 shadow-lg ${
                         nft.rarity === 0
-                          ? "bg-gray-500"
+                          ? "bg-gray-200"
                           : nft.rarity === 1
-                          ? "bg-blue-500"
+                          ? "bg-blue-200"
                           : nft.rarity === 2
-                          ? "bg-purple-500"
-                          : "bg-yellow-500"
+                          ? "bg-purple-200"
+                          : "bg-yellow-200"
                       }`}
                     >
                       {["Common", "Rare", "Epic", "Legendary"][nft.rarity]}
@@ -794,14 +919,25 @@ export default function MyProfilePage() {
                     </div>
 
                     {/* View on Explorer */}
-                    <a
-                      href={`https://suiexplorer.com/object/${nft.id}?network=testnet`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 block w-full text-center py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded transition-colors border border-blue-200"
-                    >
-                      View on Sui Explorer →
-                    </a>
+                    <div className="space-y-2 mt-3">
+                      <a
+                        href={`https://suiexplorer.com/object/${nft.id}?network=testnet`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full text-center py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded transition-colors border border-blue-200"
+                      >
+                        View on Sui Explorer →
+                      </a>
+                      <button
+                        onClick={() => {
+                          setListingNFT(nft);
+                          setListingPrice("");
+                        }}
+                        className="w-full py-2 text-xs font-semibold text-gray-900 bg-purple-500 hover:bg-purple-600 rounded transition-colors"
+                      >
+                        🛍️ List on Kiosk
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -817,13 +953,92 @@ export default function MyProfilePage() {
               </p>
               <Link
                 href="/create"
-                className="inline-flex items-center px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-semibold"
+                className="inline-flex items-center px-6 py-2 bg-purple-500 text-gray-900 rounded-lg hover:bg-purple-600 transition-colors font-semibold"
               >
                 Create Memory
               </Link>
             </div>
           )}
         </div>
+
+        {/* ============ LISTING MODAL ============ */}
+        {listingNFT && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 border border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                📋 List NFT on Kiosk
+              </h2>
+
+              {/* NFT Preview */}
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  {listingNFT.name}
+                </h3>
+                <p className="text-sm text-gray-600 line-clamp-2">
+                  {listingNFT.content}
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-bold text-gray-900 ${
+                      listingNFT.rarity === 0
+                        ? "bg-gray-200"
+                        : listingNFT.rarity === 1
+                        ? "bg-blue-200"
+                        : listingNFT.rarity === 2
+                        ? "bg-purple-200"
+                        : "bg-yellow-200"
+                    }`}
+                  >
+                    {["Common", "Rare", "Epic", "Legendary"][listingNFT.rarity]}
+                  </span>
+                  <span className="px-2 py-1 rounded text-xs font-bold text-pink-600 bg-pink-100">
+                    {listingNFT.perfection} Perfection
+                  </span>
+                </div>
+              </div>
+
+              {/* Price Input */}
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Price (SUI)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.50"
+                  value={listingPrice}
+                  onChange={(e) => setListingPrice(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 text-gray-900"
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setListingNFT(null);
+                    setListingPrice("");
+                  }}
+                  className="flex-1 py-2 rounded-lg font-semibold text-gray-900 bg-gray-200 hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleListNFT}
+                  disabled={listingLoading || !listingPrice}
+                  className={`flex-1 py-2 rounded-lg font-semibold text-gray-900 transition-colors ${
+                    listingLoading || !listingPrice
+                      ? "bg-gray-300 cursor-not-allowed"
+                      : "bg-purple-500 hover:bg-purple-600"
+                  }`}
+                >
+                  {listingLoading ? "Listing..." : "List NFT"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
