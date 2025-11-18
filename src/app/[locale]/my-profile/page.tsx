@@ -14,8 +14,12 @@ import {
   getUserKioskCaps,
   listMemoryNFTToKiosk,
   createKiosk,
+  getUserKioskListings,
+  getUserKioskListingsAlt,
+  getKioskItems,
 } from "@/services/profileService";
 import { useSignAndExecuteTransaction } from "@mysten/dapp-kit";
+import { uploadImageToWalrus, getWalrusUrl } from "@/utils/walrusUpload";
 
 interface Badge {
   location_id: number;
@@ -46,6 +50,22 @@ interface ProfileData {
   badges: Badge[];
 }
 
+interface KioskListing {
+  listingId: string;
+  memoryId: string;
+  kioskId: string;
+  seller: string;
+  price: string;
+  listedAt: string;
+  name: string;
+  content: string;
+  imageUrl: string;
+  latitude: string;
+  longitude: string;
+  rarity: number;
+  perfection: number;
+}
+
 export default function MyProfilePage() {
   const currentAccount = useCurrentAccount();
   const { mutate: signAndExecute } = useSignAndExecuteTransaction();
@@ -53,12 +73,17 @@ export default function MyProfilePage() {
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [memoryNFTs, setMemoryNFTs] = useState<MemoryNFT[]>([]);
+  const [kioskListings, setKioskListings] = useState<KioskListing[]>([]);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [minting, setMinting] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [listingNFT, setListingNFT] = useState<MemoryNFT | null>(null);
   const [listingPrice, setListingPrice] = useState("");
   const [listingLoading, setListingLoading] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState("");
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(
+    null
+  );
 
   // Form states
   const [formData, setFormData] = useState({
@@ -97,7 +122,7 @@ export default function MyProfilePage() {
 
               // Load badges from claimed_badges table
               const badges = await getProfileBadges(profile.data.objectId);
-              console.log("Loaded badges:", badges);
+
               setProfileData({
                 ...profileInfo,
                 badges: badges as Badge[],
@@ -105,8 +130,38 @@ export default function MyProfilePage() {
 
               // Load user's memory NFTs
               const nfts = await getUserMemoryNFTs(currentAccount.address);
-              console.log("Loaded memory NFTs:", nfts);
+
               setMemoryNFTs(nfts);
+
+              // Load user's kiosk listings
+              // Try multiple methods in order of reliability
+              let listings: KioskListing[] = [];
+
+              // Method 1: Query all MemoryListing objects and filter by seller
+              const allListings = await getKioskItems();
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const userListings = allListings.filter(
+                (item: any) => item.seller === currentAccount.address
+              );
+              console.log("User listings from all listings:", userListings);
+              if (userListings.length > 0) {
+                listings = userListings as KioskListing[];
+              }
+
+              // Method 2: Try alternative listings query
+              if (listings.length === 0) {
+                listings = await getUserKioskListingsAlt(
+                  currentAccount.address
+                );
+              }
+
+              // Method 3: Fallback to event-based method
+              if (listings.length === 0) {
+                listings = await getUserKioskListings(currentAccount.address);
+              }
+
+              console.log("Final kiosk listings:", listings);
+              setKioskListings(listings);
             }
           }
         }
@@ -134,10 +189,29 @@ export default function MyProfilePage() {
 
     try {
       setMinting(true);
+
+      // If user selected a new avatar file, upload it first
+      let finalAvatarUrl = formData.avatarUrl;
+      if (selectedAvatarFile && !formData.avatarUrl.includes("walrus")) {
+        try {
+          const blobId = await uploadImageToWalrus(selectedAvatarFile);
+          finalAvatarUrl = getWalrusUrl(blobId);
+        } catch (uploadError) {
+          alert(
+            "Failed to upload avatar: " +
+              (uploadError instanceof Error
+                ? uploadError.message
+                : String(uploadError))
+          );
+          setMinting(false);
+          return;
+        }
+      }
+
       const tx = await mintProfile(currentAccount.address, {
         name: formData.name,
         bio: formData.bio,
-        avatarUrl: formData.avatarUrl,
+        avatarUrl: finalAvatarUrl,
         socialLinks: [],
         country: "",
       });
@@ -180,10 +254,29 @@ export default function MyProfilePage() {
 
     try {
       setUpdating(true);
+
+      // If user selected a new avatar file, upload it first
+      let finalAvatarUrl = formData.avatarUrl;
+      if (selectedAvatarFile && !formData.avatarUrl.includes("walrus")) {
+        try {
+          const blobId = await uploadImageToWalrus(selectedAvatarFile);
+          finalAvatarUrl = getWalrusUrl(blobId);
+        } catch (uploadError) {
+          alert(
+            "Failed to upload avatar: " +
+              (uploadError instanceof Error
+                ? uploadError.message
+                : String(uploadError))
+          );
+          setUpdating(false);
+          return;
+        }
+      }
+
       const tx = await updateProfile(profileData.objectId, {
         name: formData.name,
         bio: formData.bio,
-        avatarUrl: formData.avatarUrl,
+        avatarUrl: finalAvatarUrl,
         socialLinks: [],
       });
 
@@ -216,6 +309,35 @@ export default function MyProfilePage() {
     setFailedImages((prev) => new Set(prev).add(nftId));
   };
 
+  // Handle avatar image upload to Walrus
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        alert("Please select a valid image file");
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        alert("Image size must be less than 10MB");
+        return;
+      }
+
+      // Show preview
+      const previewUrl = URL.createObjectURL(file);
+      setAvatarPreview(previewUrl);
+      setSelectedAvatarFile(file);
+    } catch (error) {
+      console.error("Error selecting avatar:", error);
+      alert("Error: " + (error as Error).message);
+    }
+  };
+
   // List NFT to Kiosk
   const handleListNFT = async () => {
     if (!listingNFT || !listingPrice || !currentAccount?.address) {
@@ -230,7 +352,7 @@ export default function MyProfilePage() {
       const kiosks = await getUserKiosks(currentAccount.address);
 
       // If no kiosk exists, ask user to create one
-      if (kiosks.length === 0) {
+      if (!kiosks || kiosks.length === 0) {
         const shouldCreate = window.confirm(
           "You don't have a Kiosk yet. Do you want to create one now?"
         );
@@ -268,6 +390,9 @@ export default function MyProfilePage() {
                   errorMsg.includes("User rejected")
                 ) {
                   alert("Transaction cancelled. You can try again anytime.");
+                } else if (errorMsg.includes("1001")) {
+                  alert("You already have a Kiosk! Refreshing to load it...");
+                  setTimeout(() => window.location.reload(), 1500);
                 } else {
                   alert("Failed to create Kiosk: " + errorMsg);
                 }
@@ -289,13 +414,24 @@ export default function MyProfilePage() {
       // Use first kiosk
       const kioskId = kiosks[0]?.id || "";
 
-      // Get user's kiosk caps
-      const caps = await getUserKioskCaps(currentAccount.address);
-      const capId = caps[0]?.id || "";
+      if (!kioskId) {
+        alert("Error: Could not find your Kiosk ID");
+        setListingLoading(false);
+        return;
+      }
+
+      // Get kiosk cap ID (either from kiosks array or from caps query)
+      let capId = kiosks[0]?.capId || "";
+
+      if (!capId) {
+        // Fallback: query caps
+        const caps = await getUserKioskCaps(currentAccount.address);
+        capId = caps[0]?.id || "";
+      }
 
       if (!capId) {
         alert(
-          "Error: Could not find your KioskOwnerCap. Please try creating kiosk again."
+          "Error: Could not find your KioskOwnerCap. Your kiosk may not be fully initialized."
         );
         setListingLoading(false);
         return;
@@ -381,62 +517,78 @@ export default function MyProfilePage() {
   // ============================================
   if (!currentAccount?.address) {
     return (
-      <div className="min-h-screen bg-white pt-20 py-12">
-        <div className="max-w-2xl mx-auto px-4">
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2 text-center">
-              Create Your Profile
-            </h1>
-            <p className="text-gray-600 text-center mb-8">
-              Connect your wallet to start collecting badges from locations
-            </p>
-
-            {/* Placeholder form showing what will happen */}
-            <div className="space-y-6 opacity-60 pointer-events-none">
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Name *
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter your name"
-                  disabled
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Bio
-                </label>
-                <textarea
-                  placeholder="Tell us about yourself (optional)"
-                  disabled
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed h-24 resize-none"
-                />
-              </div>
-
-              <button
-                disabled
-                className="w-full py-3 rounded-lg font-semibold text-lg bg-gray-300 text-gray-600 cursor-not-allowed"
-              >
-                Create Profile
-              </button>
-            </div>
-
-            <div className="text-center mt-8">
-              <p className="text-gray-600">
-                <Link
-                  href="/claim-badge"
-                  className="text-blue-600 hover:text-blue-700 font-semibold"
-                >
-                  browse locations first
-                </Link>
+      <section className="relative pb-10 pt-20 md:pt-32 h-1527">
+        <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 block dark:hidden h-full">
+          <img
+            src="/images/gradient.jpg"
+            alt="gradient"
+            className="h-full w-full"
+          />
+        </picture>
+        <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 hidden dark:block">
+          <img
+            src="/images/gradient_dark.jpg"
+            alt="gradient dark"
+            className="h-full w-full"
+          />
+        </picture>
+        <div className="min-h-screen bg-white pt-20 py-12">
+          <div className="max-w-2xl mx-auto px-4">
+            <div className="bg-white rounded-lg shadow-lg p-8">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2 text-center">
+                Create Your Profile
+              </h1>
+              <p className="text-gray-600 text-center mb-8">
+                Connect your wallet to start collecting badges from locations
               </p>
+
+              {/* Placeholder form showing what will happen */}
+              <div className="space-y-6 opacity-60 pointer-events-none">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter your name"
+                    disabled
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Bio
+                  </label>
+                  <textarea
+                    placeholder="Tell us about yourself (optional)"
+                    disabled
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed h-24 resize-none"
+                  />
+                </div>
+
+                <button
+                  disabled
+                  className="w-full py-3 rounded-lg font-semibold text-lg bg-gray-300 text-gray-600 cursor-not-allowed"
+                >
+                  Create Profile
+                </button>
+              </div>
+
+              <div className="text-center mt-8">
+                <p className="text-gray-600">
+                  <Link
+                    href="/claim-badge"
+                    className="text-blue-600 hover:text-blue-700 font-semibold"
+                  >
+                    browse locations first
+                  </Link>
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
     );
   }
 
@@ -445,121 +597,178 @@ export default function MyProfilePage() {
   // ============================================
   if (!profileData) {
     return (
-      <div className="min-h-screen bg-white pt-20 py-12">
-        <div className="max-w-2xl mx-auto px-4">
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2 text-center">
-              Create Your Profile
-            </h1>
-            <p className="text-gray-600 text-center mb-8">
-              Set up your profile to start collecting badges from locations
-            </p>
+      <section className="relative pb-10 pt-20 md:pt-32 h-1527">
+        <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 block dark:hidden h-full">
+          <img
+            src="/images/gradient.jpg"
+            alt="gradient"
+            className="h-full w-full"
+          />
+        </picture>
+        <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 hidden dark:block">
+          <img
+            src="/images/gradient_dark.jpg"
+            alt="gradient dark"
+            className="h-full w-full"
+          />
+        </picture>
+        <div className="min-h-screen bg-white pt-20 py-12">
+          <div className="max-w-2xl mx-auto px-4">
+            <div className="bg-white rounded-lg shadow-lg p-8">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2 text-center">
+                Create Your Profile
+              </h1>
+              <p className="text-gray-600 text-center mb-8">
+                Set up your profile to start collecting badges from locations
+              </p>
 
-            {/* Form */}
-            <div className="space-y-6">
-              {/* Name */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Name *
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter your name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 placeholder-gray-400"
-                />
-              </div>
+              {/* Form */}
+              <div className="space-y-6">
+                {/* Name */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter your name"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 placeholder-gray-400"
+                  />
+                </div>
 
-              {/* Bio */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Bio
-                </label>
-                <textarea
-                  placeholder="Tell us about yourself (optional)"
-                  value={formData.bio}
-                  onChange={(e) =>
-                    setFormData({ ...formData, bio: e.target.value })
-                  }
-                  rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 placeholder-gray-400"
-                />
-              </div>
+                {/* Bio */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Bio
+                  </label>
+                  <textarea
+                    placeholder="Tell us about yourself (optional)"
+                    value={formData.bio}
+                    onChange={(e) =>
+                      setFormData({ ...formData, bio: e.target.value })
+                    }
+                    rows={4}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 placeholder-gray-400"
+                  />
+                </div>
 
-              {/* Avatar URL */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Avatar URL
-                </label>
-                <input
-                  type="url"
-                  placeholder="https://example.com/avatar.jpg (optional)"
-                  value={formData.avatarUrl}
-                  onChange={(e) =>
-                    setFormData({ ...formData, avatarUrl: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 placeholder-gray-400"
-                />
-              </div>
+                {/* Avatar URL */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Avatar 🖼️
+                  </label>
 
-              {/* Preview */}
-              {(formData.name || formData.bio) && (
-                <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-blue-50">
-                  <h3 className="text-lg font-semibold mb-3">
-                    Profile Preview
-                  </h3>
-                  <div className="flex gap-4">
-                    {formData.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={formData.avatarUrl}
-                        alt="Avatar"
-                        className="w-20 h-20 rounded-full object-cover"
+                  {/* File Upload Button */}
+                  <div className="mb-3">
+                    <label className="flex items-center justify-center px-4 py-2 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer">
+                      <span className="text-sm font-semibold text-blue-600">
+                        📤 Select Image
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
+                        className="hidden"
                       />
-                    ) : (
-                      <div className="w-20 h-20 rounded-full bg-blue-400 flex items-center justify-center text-2xl">
-                        👤
+                    </label>
+                  </div>
+
+                  {/* Preview */}
+                  {avatarPreview && (
+                    <div className="mb-3 flex flex-col items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={avatarPreview}
+                        alt="Avatar preview"
+                        className="w-24 h-24 rounded-full object-cover border-2 border-blue-300"
+                      />
+                      <p className="text-xs text-blue-600 font-semibold">
+                        ✓ Selected (will upload on Create)
+                      </p>
+                    </div>
+                  )}
+
+                  {/* URL Input (shows Walrus URL after upload) */}
+                  <input
+                    type="url"
+                    placeholder="https://example.com/avatar.jpg (or select above)"
+                    value={formData.avatarUrl}
+                    onChange={(e) =>
+                      setFormData({ ...formData, avatarUrl: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 placeholder-gray-400 text-xs"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formData.avatarUrl.includes("walrus")
+                      ? "✅ Already on Walrus"
+                      : "Select image or paste existing URL"}
+                  </p>
+                </div>
+
+                {/* Preview */}
+                {(formData.name || formData.bio) && (
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-blue-50">
+                    <h3 className="text-lg font-semibold mb-3">
+                      Profile Preview
+                    </h3>
+                    <div className="flex gap-4">
+                      {formData.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={formData.avatarUrl}
+                          alt="Avatar"
+                          className="w-20 h-20 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full bg-blue-400 flex items-center justify-center text-2xl">
+                          👤
+                        </div>
+                      )}
+                      <div>
+                        <h4 className="font-bold text-lg">{formData.name}</h4>
+                        <p className="text-blue-100 text-sm">{formData.bio}</p>
                       </div>
-                    )}
-                    <div>
-                      <h4 className="font-bold text-lg">{formData.name}</h4>
-                      <p className="text-blue-100 text-sm">{formData.bio}</p>
                     </div>
                   </div>
+                )}
+
+                {/* Submit Button */}
+                <button
+                  onClick={handleMintProfile}
+                  disabled={minting || !formData.name.trim()}
+                  className={`w-full py-3 rounded-lg font-semibold text-lg transition-colors ${
+                    minting || !formData.name.trim()
+                      ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                      : "bg-blue-500 text-gray-900 hover:bg-blue-600"
+                  }`}
+                >
+                  {minting
+                    ? avatarPreview && !formData.avatarUrl.includes("walrus")
+                      ? "📤 Uploading Avatar..."
+                      : "Creating Profile..."
+                    : "Create Profile"}
+                </button>
+
+                {/* Links */}
+                <div className="text-center space-y-2">
+                  <p>
+                    <Link
+                      href="/claim-badge"
+                      className="text-blue-600 hover:text-blue-700 font-semibold"
+                    >
+                      Browse locations first
+                    </Link>
+                  </p>
                 </div>
-              )}
-
-              {/* Submit Button */}
-              <button
-                onClick={handleMintProfile}
-                disabled={minting || !formData.name.trim()}
-                className={`w-full py-3 rounded-lg font-semibold text-lg transition-colors ${
-                  minting || !formData.name.trim()
-                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                    : "bg-blue-500 text-gray-900 hover:bg-blue-600"
-                }`}
-              >
-                {minting ? "Creating Profile..." : "Create Profile"}
-              </button>
-
-              {/* Links */}
-              <div className="text-center space-y-2">
-                <p>
-                  <Link
-                    href="/claim-badge"
-                    className="text-blue-600 hover:text-blue-700 font-semibold"
-                  >
-                    Browse locations first
-                  </Link>
-                </p>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
     );
   }
 
@@ -697,6 +906,22 @@ export default function MyProfilePage() {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 text-sm"
               />
+              <label className="block text-xs text-gray-600 mt-2 cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+                <span className="text-blue-600 hover:text-blue-700">
+                  📤 Select new image
+                </span>
+              </label>
+              {avatarPreview && (
+                <p className="text-xs text-blue-600 mt-1 font-semibold">
+                  ✓ Selected (will upload on Save)
+                </p>
+              )}
             </div>
             <button
               onClick={handleUpdateProfile}
@@ -707,7 +932,11 @@ export default function MyProfilePage() {
                   : "bg-blue-500 text-gray-900 hover:bg-blue-600"
               }`}
             >
-              {updating ? "Updating..." : "Save Changes"}
+              {updating
+                ? avatarPreview && !formData.avatarUrl.includes("walrus")
+                  ? "📤 Uploading..."
+                  : "Updating..."
+                : "Save Changes"}
             </button>
           </div>
         </div>
@@ -828,6 +1057,151 @@ export default function MyProfilePage() {
             </div>
           )}
         </div>
+
+        {/* ============ 3.5. KIOSK LISTINGS ============ */}
+        {profileData && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+                🛍️ My Kiosk Listings
+                <span className="text-lg bg-green-100 text-green-600 px-3 py-1 rounded-full">
+                  {kioskListings.length}
+                </span>
+              </h2>
+            </div>
+
+            {kioskListings.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {kioskListings.map((listing) => (
+                  <div
+                    key={listing.listingId}
+                    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all border-2 border-green-200"
+                  >
+                    {/* Image */}
+                    <div className="relative h-48 overflow-hidden bg-gray-200">
+                      {listing.imageUrl &&
+                      !failedImages.has(listing.memoryId) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={listing.imageUrl}
+                          alt={listing.name}
+                          className="w-full h-full object-cover hover:scale-110 transition-transform"
+                          onError={() =>
+                            setFailedImages((prev) =>
+                              new Set(prev).add(listing.memoryId)
+                            )
+                          }
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-gray-100 to-gray-200">
+                          📸
+                        </div>
+                      )}
+
+                      {/* Status Badge - Listed */}
+                      <div className="absolute top-3 left-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                        ✓ Listed
+                      </div>
+
+                      {/* Rarity Badge */}
+                      <div
+                        className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold text-gray-900 shadow-lg ${
+                          listing.rarity === 0
+                            ? "bg-gray-200"
+                            : listing.rarity === 1
+                            ? "bg-blue-200"
+                            : listing.rarity === 2
+                            ? "bg-purple-200"
+                            : "bg-yellow-200"
+                        }`}
+                      >
+                        {
+                          ["Common", "Rare", "Epic", "Legendary"][
+                            listing.rarity
+                          ]
+                        }
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <div className="p-4">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1">
+                        {listing.name}
+                      </h3>
+                      <p className="text-xs text-gray-600 mb-3 line-clamp-2">
+                        {listing.content}
+                      </p>
+
+                      {/* Location & Stats */}
+                      <div className="mb-3 text-xs text-gray-500">
+                        📍 {listing.latitude}, {listing.longitude}
+                      </div>
+
+                      {/* Price Display */}
+                      <div className="bg-green-50 border border-green-200 rounded p-3 mb-3">
+                        <div className="text-sm text-gray-600 mb-1">
+                          Listed Price:
+                        </div>
+                        <div className="text-lg font-bold text-green-600">
+                          {(BigInt(listing.price) / BigInt(1e9)).toString()} SUI
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded p-2 text-center border border-pink-200">
+                          <div className="text-sm font-bold text-pink-600">
+                            {listing.perfection}
+                          </div>
+                          <div className="text-xs text-pink-500 font-medium">
+                            Perfection
+                          </div>
+                        </div>
+                        <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded p-2 text-center border border-yellow-200">
+                          <div className="text-sm font-bold text-yellow-600">
+                            {((listing.perfection / 1000) * 100).toFixed(0)}%
+                          </div>
+                          <div className="text-xs text-yellow-500 font-medium">
+                            Quality
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* View on Explorer */}
+                      <div className="space-y-2 mt-3">
+                        <a
+                          href={`https://suiexplorer.com/object/${listing.listingId}?network=testnet`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block w-full text-center py-2 text-xs font-semibold text-green-600 hover:bg-green-50 rounded transition-colors border border-green-200"
+                        >
+                          View Listing →
+                        </a>
+                        <button
+                          className="w-full py-2 text-xs font-semibold text-gray-900 bg-red-500 hover:bg-red-600 rounded transition-colors"
+                          title="Unlist feature coming soon"
+                          disabled
+                        >
+                          ❌ Unlist (Coming Soon)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border-2 border-dashed border-green-300">
+                <div className="text-5xl mb-4">🛍️</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  No listings yet
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Your memory NFTs are not listed on your kiosk yet. Use the
+                  section below to list NFTs for sale!
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ============ 4. MEMORY NFTs COLLECTION ============ */}
         <div className="space-y-4">
