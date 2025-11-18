@@ -865,87 +865,104 @@ export const getUserKioskListingsAlt = async (userAddress: string) => {
  */
 export const getKioskItems = async () => {
   try {
-    console.log("🔍 Querying MemoryListing objects for kiosk items");
+    console.log("🔍 Querying MemoryListing objects using events");
 
-    // Query all MemoryListing shared objects
-    const objects = await suiClient.getOwnedObjects({
-      owner: "0x2", // Shared objects are technically owned by the system at 0x2
-      filter: {
-        StructType: `${CONTRACT_CONFIG.PACKAGE_ID}::memory_marketplace::MemoryListing`,
+    // Query MemoryListed events to find all listings
+    const events = await suiClient.queryEvents({
+      query: {
+        MoveEventType: `${CONTRACT_CONFIG.PACKAGE_ID}::memory_marketplace::MemoryListed`,
       },
-      options: {
-        showContent: true,
-      },
-      limit: 100,
+      limit: 200,
+      order: "descending",
     });
 
-    console.log("📊 Found MemoryListing shared objects:", objects.data.length);
+    console.log("📊 Found MemoryListed events:", events.data.length);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const items: any[] = [];
+    const processedListings = new Set<string>();
 
-    // Process each listing
-    for (const obj of objects.data) {
+    // Process each event
+    for (const event of events.data) {
       try {
-        if (obj.data?.content) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const fields = (obj.data.content as any).fields;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const eventData = event.parsedJson as any;
+        console.log("📌 Event data:", eventData);
 
-          console.log("📌 Listing found - Memory ID:", fields.memory_id);
+        if (
+          eventData?.listing_id &&
+          !processedListings.has(eventData.listing_id)
+        ) {
+          processedListings.add(eventData.listing_id);
 
-          // Try to get Memory NFT details
-          try {
-            const memoryNFT = await suiClient.getObject({
-              id: fields.memory_id,
-              options: {
-                showContent: true,
-              },
-            });
+          // Get listing object
+          const listing = await suiClient.getObject({
+            id: eventData.listing_id,
+            options: {
+              showContent: true,
+            },
+          });
 
-            if (memoryNFT.data?.content) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const memoryFields = (memoryNFT.data.content as any).fields;
+          if (listing.data?.content) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const fields = (listing.data.content as any).fields;
 
+            console.log("🔗 Listing seller:", fields.seller);
+
+            // Try to get Memory NFT details
+            try {
+              const memoryNFT = await suiClient.getObject({
+                id: fields.memory_id,
+                options: {
+                  showContent: true,
+                },
+              });
+
+              if (memoryNFT.data?.content) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const memoryFields = (memoryNFT.data.content as any).fields;
+
+                items.push({
+                  listingId: listing.data.objectId,
+                  memoryId: fields.memory_id,
+                  seller: fields.seller,
+                  price: fields.price,
+                  listedAt: fields.listed_at,
+                  name: memoryFields?.name || "Unknown",
+                  content: memoryFields?.content || "",
+                  imageUrl: memoryFields?.image_url || "",
+                  latitude: memoryFields?.latitude || "",
+                  longitude: memoryFields?.longitude || "",
+                  rarity: memoryFields?.rarity || 0,
+                  perfection: memoryFields?.perfection || 0,
+                });
+              }
+            } catch (err) {
+              console.debug("Could not fetch memory NFT details:", err);
+              // Still add listing with minimal info
               items.push({
-                listingId: obj.data.objectId,
+                listingId: listing.data.objectId,
                 memoryId: fields.memory_id,
                 seller: fields.seller,
                 price: fields.price,
                 listedAt: fields.listed_at,
-                name: memoryFields?.name || "Unknown",
-                content: memoryFields?.content || "",
-                imageUrl: memoryFields?.image_url || "",
-                latitude: memoryFields?.latitude || "",
-                longitude: memoryFields?.longitude || "",
-                rarity: memoryFields?.rarity || 0,
-                perfection: memoryFields?.perfection || 0,
+                name: "Memory NFT",
+                content: "",
+                imageUrl: "",
+                latitude: "",
+                longitude: "",
+                rarity: 0,
+                perfection: 0,
               });
             }
-          } catch (err) {
-            console.debug("Could not fetch memory NFT details:", err);
-            // Still add listing with minimal info
-            items.push({
-              listingId: obj.data.objectId,
-              memoryId: fields.memory_id,
-              seller: fields.seller,
-              price: fields.price,
-              listedAt: fields.listed_at,
-              name: "Memory NFT",
-              content: "",
-              imageUrl: "",
-              latitude: "",
-              longitude: "",
-              rarity: 0,
-              perfection: 0,
-            });
           }
         }
       } catch (err) {
-        console.debug("Could not process listing object:", err);
+        console.debug("Could not process listing:", err);
       }
     }
 
-    console.log("✅ Found total items in listings:", items.length);
+    console.log("✅ Found total items from events:", items.length);
     return items;
   } catch (error) {
     console.error("Error getting kiosk items:", error);

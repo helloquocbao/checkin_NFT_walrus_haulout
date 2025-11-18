@@ -12,6 +12,8 @@ import {
   voteForProfile,
   claimVerification,
   getActualVoteCount,
+  getUserMemoryNFTs,
+  getKioskItems,
 } from "@/services/profileService";
 
 interface Badge {
@@ -35,6 +37,33 @@ interface ProfileInfo {
   verify_votes: number;
 }
 
+interface MemoryNFT {
+  id: string;
+  name: string;
+  content: string;
+  image_url: string;
+  latitude: string;
+  longitude: string;
+  rarity: number;
+  perfection: number;
+  created_at: string;
+}
+
+interface KioskListing {
+  listingId: string;
+  memoryId: string;
+  seller: string;
+  price: string;
+  listedAt: string;
+  name: string;
+  content: string;
+  imageUrl: string;
+  latitude: string;
+  longitude: string;
+  rarity: number;
+  perfection: number;
+}
+
 export default function UserProfilePage() {
   const params = useParams();
   const profileId = params.id as string;
@@ -44,6 +73,8 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);
   const [badges, setBadges] = useState<Badge[]>([]);
+  const [memoryNFTs, setMemoryNFTs] = useState<MemoryNFT[]>([]);
+  const [kioskListings, setKioskListings] = useState<KioskListing[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [verifyThreshold, setVerifyThreshold] = useState(3);
   const [canClaimVerify, setCanClaimVerify] = useState(false);
@@ -150,6 +181,31 @@ export default function UserProfilePage() {
           : [];
 
         setBadges(badgesData);
+
+        // Load user's memory NFTs
+        if (fields.owner) {
+          try {
+            const nfts = await getUserMemoryNFTs(fields.owner);
+            setMemoryNFTs(nfts);
+          } catch (err) {
+            console.error("Error loading memory NFTs:", err);
+          }
+        }
+
+        // Load user's kiosk listings
+        try {
+          const allListings = await getKioskItems();
+          console.log("🔍 All listings found:", allListings.length);
+          console.log("📊 Looking for listings from seller:", fields.owner);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const userListings = allListings.filter(
+            (item: any) => item.seller === fields.owner
+          );
+          console.log("✅ User listings found:", userListings.length);
+          setKioskListings(userListings as KioskListing[]);
+        } catch (err) {
+          console.error("Error loading kiosk listings:", err);
+        }
       } catch (err) {
         console.error("Error loading profile:", err);
         setError("Failed to load profile");
@@ -591,6 +647,182 @@ export default function UserProfilePage() {
                         {formatDate(badge.created_at)}
                       </div>
                     </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Memory NFTs Section */}
+        <div className="mb-12">
+          <div className="mb-8">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+              📸 Memory NFTs ({memoryNFTs.length})
+            </h2>
+            <p className="text-gray-600">
+              {memoryNFTs.length} memory NFT{memoryNFTs.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+
+          {memoryNFTs.length === 0 ? (
+            <div className="bg-gray-50 rounded-lg p-12 text-center border-2 border-dashed border-gray-300">
+              <div className="text-4xl mb-4">📸</div>
+              <p className="text-gray-600">No memory NFTs yet</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {memoryNFTs.map((nft) => (
+                <div
+                  key={nft.id}
+                  className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow border-l-4 border-purple-500"
+                >
+                  {/* Image */}
+                  <div className="relative h-40 sm:h-48 bg-gray-200 overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={nft.image_url || "https://via.placeholder.com/300"}
+                      alt={nft.name}
+                      className="w-full h-full object-cover"
+                    />
+
+                    {/* Rarity Badge */}
+                    <div
+                      className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold ${getRarityColor(
+                        nft.rarity
+                      )}`}
+                    >
+                      {getRarityName(nft.rarity)}
+                    </div>
+                  </div>
+
+                  {/* NFT Info */}
+                  <div className="p-4">
+                    <h3 className="text-lg font-bold text-gray-900">
+                      {nft.name}
+                    </h3>
+
+                    <p className="text-xs text-gray-600 mt-2 line-clamp-2">
+                      {nft.content}
+                    </p>
+
+                    <div className="mt-3 text-xs text-gray-500">
+                      📍 {nft.latitude}, {nft.longitude}
+                    </div>
+
+                    <div className="mt-3 space-y-1 text-sm text-gray-600">
+                      <div>
+                        <span className="font-semibold">Perfection:</span>{" "}
+                        <span className="text-purple-600">
+                          {nft.perfection}
+                        </span>
+                      </div>
+                    </div>
+
+                    <a
+                      href={`https://suiexplorer.com/object/${nft.id}?network=testnet`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full mt-3 text-center py-2 bg-purple-100 text-purple-600 rounded-lg text-xs font-semibold hover:bg-purple-200 transition-colors"
+                    >
+                      View on Explorer →
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Kiosk Listings Section */}
+        <div className="mb-12">
+          <div className="mb-8">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+              🛍️ Listed on Kiosk ({kioskListings.length})
+            </h2>
+            <p className="text-gray-600">
+              {kioskListings.length} NFT{kioskListings.length !== 1 ? "s" : ""}{" "}
+              for sale
+            </p>
+          </div>
+
+          {kioskListings.length === 0 ? (
+            <div className="bg-gray-50 rounded-lg p-12 text-center border-2 border-dashed border-gray-300">
+              <div className="text-4xl mb-4">🛍️</div>
+              <p className="text-gray-600">No NFTs listed on kiosk</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {kioskListings.map((listing) => (
+                <div
+                  key={listing.listingId}
+                  className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow border-l-4 border-green-500"
+                >
+                  {/* Image */}
+                  <div className="relative h-40 sm:h-48 bg-gray-200 overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={
+                        listing.imageUrl || "https://via.placeholder.com/300"
+                      }
+                      alt={listing.name}
+                      className="w-full h-full object-cover"
+                    />
+
+                    {/* Status Badge */}
+                    <div className="absolute top-3 left-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+                      ✓ Listed
+                    </div>
+
+                    {/* Rarity Badge */}
+                    <div
+                      className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold ${getRarityColor(
+                        listing.rarity
+                      )}`}
+                    >
+                      {getRarityName(listing.rarity)}
+                    </div>
+                  </div>
+
+                  {/* Listing Info */}
+                  <div className="p-4">
+                    <h3 className="text-lg font-bold text-gray-900">
+                      {listing.name}
+                    </h3>
+
+                    <p className="text-xs text-gray-600 mt-2 line-clamp-2">
+                      {listing.content}
+                    </p>
+
+                    <div className="mt-3 text-xs text-gray-500">
+                      📍 {listing.latitude}, {listing.longitude}
+                    </div>
+
+                    {/* Price Display */}
+                    <div className="mt-3 bg-green-50 border border-green-200 rounded p-2">
+                      <div className="text-xs text-gray-600">Listed Price:</div>
+                      <div className="text-lg font-bold text-green-600">
+                        {(BigInt(listing.price) / BigInt(1e9)).toString()} SUI
+                      </div>
+                    </div>
+
+                    <div className="mt-3 space-y-1 text-sm text-gray-600">
+                      <div>
+                        <span className="font-semibold">Perfection:</span>{" "}
+                        <span className="text-green-600">
+                          {listing.perfection}
+                        </span>
+                      </div>
+                    </div>
+
+                    <a
+                      href={`https://suiexplorer.com/object/${listing.listingId}?network=testnet`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full mt-3 text-center py-2 bg-green-100 text-green-600 rounded-lg text-xs font-semibold hover:bg-green-200 transition-colors"
+                    >
+                      View Listing →
+                    </a>
                   </div>
                 </div>
               ))}

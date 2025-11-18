@@ -153,63 +153,7 @@ entry fun list_memory(
     transfer::share_object(listing);
 }
 
-/// 💰 Mua Memory NFT
-entry fun buy_memory(
-    registry: &MemoryMarketplaceRegistry,
-    listing: MemoryListing,
-    seller_kiosk: &mut Kiosk,
-    buyer_kiosk: &mut Kiosk,
-    buyer_cap: &KioskOwnerCap,
-    policy: &TransferPolicy<MemoryNFT>,
-    payment: Coin<SUI>,
-    ctx: &mut tx_context::TxContext,
-) {
-    let buyer_addr = sender(ctx);
-    
-    let MemoryListing { 
-        id, 
-        seller, 
-        memory_id,
-        price, 
-        listed_at: _,
-    } = listing;
-    let listing_addr = object::uid_to_address(&id);
-    object::delete(id);
-    
-    // 💸 Verify payment
-    let paid_amount = coin::value(&payment);
-    assert!(paid_amount >= price, 2);
-    
-    // 🛒 Purchase từ seller's kiosk
-    let (memory, request) = kiosk::purchase<MemoryNFT>(
-        seller_kiosk,
-        memory_id,
-        payment
-    );
-    
-    // ✅ Confirm transfer policy
-    let (_item, _paid, _from) = transfer_policy::confirm_request(policy, request);
-    
-    // 💎 Calculate royalty
-    let royalty_amount = (price * registry.royalty_bps) / 10000;
-    
-    // 🎁 Place vào buyer's kiosk (hoặc transfer trực tiếp)
-    // Option 1: Place vào kiosk của buyer
-    kiosk::place(buyer_kiosk, buyer_cap, memory);
-    
-    // Option 2: Nếu muốn transfer trực tiếp, uncomment dòng dưới và comment dòng trên
-    // transfer::public_transfer(memory, buyer_addr);
-    
-    // 📢 Emit event
-    event::emit(MemorySold {
-        listing_id: listing_addr,
-        seller,
-        buyer: buyer_addr,
-        memory_id,
-        price,
-        royalty_paid: royalty_amount,
-    });
-}
+
 
 /// 💰 Mua Memory NFT và transfer trực tiếp (không vào kiosk)
 entry fun buy_memory_direct(
@@ -236,19 +180,21 @@ entry fun buy_memory_direct(
     let paid_amount = coin::value(&payment);
     assert!(paid_amount >= price, 2);
     
-    // 🛒 Purchase
+    // 💎 Calculate royalty
+    let royalty_amount = (price * registry.royalty_bps) / 10000;
+    
+    // 🛒 Purchase from seller's kiosk with payment
+    // kiosk::purchase automatically sends payment to kiosk owner (seller)
     let (memory, request) = kiosk::purchase<MemoryNFT>(
         seller_kiosk,
         memory_id,
         payment
     );
     
-    // ✅ Confirm
-    let (_item, _paid, _from) = transfer_policy::confirm_request(policy, request);
+    // ✅ Confirm transfer policy
+    transfer_policy::confirm_request(policy, request);
     
-    let royalty_amount = (price * registry.royalty_bps) / 10000;
-    
-    // 🎁 Transfer trực tiếp cho buyer
+    // 🎁 Transfer NFT trực tiếp cho buyer
     transfer::public_transfer(memory, buyer_addr);
     
     // 📢 Emit event
@@ -262,7 +208,7 @@ entry fun buy_memory_direct(
     });
 }
 
-/// ❌ Delist Memory NFT
+
 entry fun delist_memory(
     listing: MemoryListing,
     kiosk: &mut Kiosk,
