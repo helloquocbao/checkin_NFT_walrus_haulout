@@ -58,28 +58,18 @@ export default function Header01() {
         <div className="flex items-center px-6 py-6 xl:px-24 ">
           <Link legacyBehavior className="shrink-0" href="/">
             <a>
-              <div className="dark:hidden">
-                <Image
-                  src={Logo}
-                  height={68}
-                  width={250}
-                  alt="Xhibiter | NFT Marketplace"
-                  className=" h-auto "
-                />
-              </div>
-              <div className="hidden dark:block">
-                <Image
-                  src={WhiteLogo}
-                  height={48}
-                  width={200}
-                  alt="Xhibiter | NFT Marketplace"
-                />
-              </div>
+              <Image
+                src={Logo}
+                height={68}
+                width={250}
+                alt="Xhibiter | NFT Marketplace"
+                className=" h-auto "
+              />
             </a>
           </Link>
           {/* End  logo */}
 
-          <div className="js-mobile-menu dark:bg-jacarta-800 invisible fixed inset-0 z-10 ml-auto items-center bg-white opacity-0 lg:visible lg:relative lg:inset-auto lg:flex lg:bg-transparent lg:opacity-100 dark:lg:bg-transparent">
+          <div className="js-mobile-menu invisible fixed inset-0 z-10 ml-auto items-center bg-white opacity-0 lg:visible lg:relative lg:inset-auto lg:flex lg:bg-transparent lg:opacity-100">
             <nav className="navbar w-full">
               <ul className="flex flex-col lg:flex-row">
                 {/* claim badge */}
@@ -104,11 +94,11 @@ export default function Header01() {
                 <li className="group">
                   <Link legacyBehavior href="/create">
                     <a>
-                      <button className="text-jacarta-700 font-display hover:text-accent focus:text-accent dark:hover:text-accent dark:focus:text-accent flex items-center justify-between py-3.5 text-base dark:text-white lg:px-5">
+                      <button className="text-jacarta-700 font-display hover:text-accent focus:text-accent flex items-center justify-between py-3.5 text-base lg:px-5">
                         <span
                           className={
                             isChildrenPageActive(route.asPath, "/create")
-                              ? "text-accent dark:text-accent"
+                              ? "text-accent"
                               : ""
                           }
                         >
@@ -123,11 +113,11 @@ export default function Header01() {
                 <li className="group">
                   <Link legacyBehavior href="/my-nfts">
                     <a>
-                      <button className="text-jacarta-700 font-display hover:text-accent focus:text-accent dark:hover:text-accent dark:focus:text-accent flex items-center justify-between py-3.5 text-base dark:text-white lg:px-5">
+                      <button className="text-jacarta-700 font-display hover:text-accent focus:text-accent flex items-center justify-between py-3.5 text-base lg:px-5">
                         <span
                           className={
                             isChildrenPageActive(route.asPath, "/my-nfts")
-                              ? "text-accent dark:text-accent"
+                              ? "text-accent"
                               : ""
                           }
                         >
@@ -142,11 +132,11 @@ export default function Header01() {
                 <li className="group">
                   <Link legacyBehavior href="/kiosk">
                     <a>
-                      <button className="text-jacarta-700 font-display hover:text-accent focus:text-accent dark:hover:text-accent dark:focus:text-accent flex items-center justify-between py-3.5 text-base dark:text-white lg:px-5">
+                      <button className="text-jacarta-700 font-display hover:text-accent focus:text-accent flex items-center justify-between py-3.5 text-base lg:px-5">
                         <span
                           className={
                             isChildrenPageActive(route.asPath, "/kiosk")
-                              ? "text-accent dark:text-accent"
+                              ? "text-accent"
                               : ""
                           }
                         >
@@ -170,7 +160,7 @@ export default function Header01() {
 
           <div className="ml-auto flex lg:hidden">
             <button
-              className="js-mobile-toggle border-jacarta-100 hover:bg-accent dark:hover:bg-accent focus:bg-accent group ml-2 flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-colors hover:border-transparent focus:border-transparent dark:border-transparent dark:bg-white/[.15]"
+              className="js-mobile-toggle border-jacarta-100 hover:bg-accent focus:bg-accent group ml-2 flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-colors hover:border-transparent focus:border-transparent"
               aria-label="open mobile menu"
               onClick={() => setToggle(true)}
             >
@@ -179,7 +169,7 @@ export default function Header01() {
                 viewBox="0 0 24 24"
                 width={24}
                 height={24}
-                className="fill-jacarta-700 h-4 w-4 transition-colors group-hover:fill-white group-focus:fill-white dark:fill-white"
+                className="fill-jacarta-700 h-4 w-4 transition-colors group-hover:fill-white group-focus:fill-white"
               >
                 <path fill="none" d="M0 0h24v24H0z" />
                 <path d="M18 18v2H6v-2h12zm3-7v2H3v-2h18zm-3-7v2H6V4h12z" />

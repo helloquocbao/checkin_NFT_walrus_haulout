@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import CameraCapture from "@/components/cameraCapture/CameraCapture";
 import Meta from "@/components/Meta";
-import { walletModalShow } from "@/redux/counterSlice";
 import {
   useCurrentAccount,
   useSignAndExecuteTransaction,
@@ -76,7 +75,6 @@ export default function Create() {
   // 🧩 Upload ảnh lên Walrus
   const handleUpload = async () => {
     if (!account) {
-      dispatch(walletModalShow());
       return;
     }
 

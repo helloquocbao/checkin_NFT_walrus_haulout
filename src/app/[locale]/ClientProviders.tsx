@@ -8,7 +8,6 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useRef } from "react";
 import UserContext from "@/components/UserContext";
-import { MetaMaskProvider } from "metamask-react";
 
 const { networkConfig } = createNetworkConfig({
   testnet: { url: "https://fullnode.testnet.sui.io:443" },
@@ -24,11 +23,9 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
-        <MetaMaskProvider>
-          <UserContext.Provider value={{ scrollRef: scrollRef }}>
-            <WalletProvider>{children}</WalletProvider>
-          </UserContext.Provider>
-        </MetaMaskProvider>
+        <UserContext.Provider value={{ scrollRef: scrollRef }}>
+          <WalletProvider>{children}</WalletProvider>
+        </UserContext.Provider>
       </SuiClientProvider>
     </QueryClientProvider>
   );

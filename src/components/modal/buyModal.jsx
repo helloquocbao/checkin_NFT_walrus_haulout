@@ -2,7 +2,6 @@ import Link from "next/link";
 import React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { buyModalHide } from "../../redux/counterSlice";
-import { Confirm_checkout } from "../metamask/Metamask";
 
 const BuyModal = () => {
   const { buyModal } = useSelector((state) => state.counter);
@@ -144,7 +143,7 @@ const BuyModal = () => {
 
             <div className="modal-footer">
               <div className="flex items-center justify-center space-x-4">
-                <Confirm_checkout />
+                oke
               </div>
             </div>
           </div>

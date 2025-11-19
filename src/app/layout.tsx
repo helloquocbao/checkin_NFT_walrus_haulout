@@ -38,7 +38,7 @@ export default async function RootLayout({
   const locale = await getLocale();
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale}>
       <head></head>
       <body className="m-0 p-0">
         <div className=" bg-light main-container">
