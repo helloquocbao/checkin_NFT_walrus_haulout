@@ -155,7 +155,9 @@ entry fun list_memory(
 
 
 
-/// 💰 Mua Memory NFT và transfer trực tiếp (không vào kiosk)
+/// 💰 Mua Memory NFT - Standard Kiosk Purchase Flow
+/// Payment được giữ trong kiosk proceeds của seller
+/// Seller phải gọi claim_proceeds() để rút tiền về ví
 entry fun buy_memory_direct(
     registry: &MemoryMarketplaceRegistry,
     listing: MemoryListing,
@@ -180,15 +182,15 @@ entry fun buy_memory_direct(
     let paid_amount = coin::value(&payment);
     assert!(paid_amount >= price, 2);
     
-    // 💎 Calculate royalty
+    // 💎 Calculate royalty (stored in registry for now)
     let royalty_amount = (price * registry.royalty_bps) / 10000;
     
-    // 🛒 Purchase from seller's kiosk with payment
-    // kiosk::purchase automatically sends payment to kiosk owner (seller)
+    // 🛒 Purchase from seller's kiosk
+    // Payment coin → stored in seller_kiosk.proceeds
     let (memory, request) = kiosk::purchase<MemoryNFT>(
         seller_kiosk,
         memory_id,
-        payment
+        payment  // Actual SUI coin → kiosk proceeds
     );
     
     // ✅ Confirm transfer policy
@@ -208,6 +210,22 @@ entry fun buy_memory_direct(
     });
 }
 
+/// 💳 Seller withdraw profits từ kiosk
+/// Lấy tất cả tiền từ kiosk.profits về ví
+entry fun withdraw_profits(
+    kiosk: &mut Kiosk,
+    cap: &KioskOwnerCap,
+    ctx: &mut tx_context::TxContext,
+) {
+    // 🔒 Verify ownership
+    assert!(kiosk::has_access(kiosk, cap), 3);
+    
+    // 💰 Withdraw all from kiosk (none = withdraw all)
+    let coin = kiosk::withdraw(kiosk, cap, option::none<u64>(), ctx);
+    
+    // 🎁 Transfer to sender
+    transfer::public_transfer(coin, sender(ctx));
+}
 
 entry fun delist_memory(
     listing: MemoryListing,

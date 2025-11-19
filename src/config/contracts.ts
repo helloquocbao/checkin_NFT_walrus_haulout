@@ -11,37 +11,37 @@ export const CONTRACT_CONFIG = {
   // Package ID - Update after deployment
   PACKAGE_ID:
     process.env.NEXT_PUBLIC_PACKAGE_ID ||
-    "0x353ae26929fc4ab9f2dc5f7ed238d6d26b25e06a3100ef803725c1fbc0fcbbc4",
+    "0x2885ef5af578b308918da87d716c5d24b6b1af22ab13628a3ba8f99bb70b7c11",
 
   // ==================== Profile & Badge System ====================
 
   // Profile Registry - Shared object for profile management
   PROFILE_REGISTRY_ID:
     process.env.NEXT_PUBLIC_PROFILE_REGISTRY_ID ||
-    "0x3c237316be3c2d25183b212b022d14047603fb3ee8ee35caa3b955dc4252c5a5",
+    "0x18e8a7dd4a293ee9b36bc085b7cec7a60018a3adc396edccb774cc3d06fdac4c",
 
   // Voter Registry - Tracks verification votes
   VOTER_REGISTRY_ID:
     process.env.NEXT_PUBLIC_VOTER_REGISTRY_ID ||
-    "0x42fcd79d532dd1e38641b18f040b4f98c8b952f8e580a793d6ba2464fd2d183d",
+    "0xa8837eaa90cfc983b7b83179dc69bb7f4d2baaaf874d1ab612f73cc19068f3c0",
 
   // Location Registry - Manages badge locations
   LOCATION_REGISTRY_ID:
     process.env.NEXT_PUBLIC_LOCATION_REGISTRY_ID ||
-    "0x346e6578b2aea4c5f5f27b76cdb49b372ac922de37e4b39378bad5aa63d2da97",
+    "0x9b92dbaf40df210dd11f9d0dba9f9184bbadcde62913187ce2fb91160b313601",
 
   // Memory Registry - Manages memory NFTs
   MEMORY_REGISTRY_ID:
     process.env.NEXT_PUBLIC_MEMORY_REGISTRY_ID ||
-    "0x21d64029862f92f5675ed08f4bfbfa071614f6736db7da7416c2ca4cbe1c3c16",
+    "0x5cc2914128c8d694c6f2551d433a27beebe018badc7445db9b916f3c97297cfd",
   MEMORY_MAKET_PLACE_ID:
     process.env.NEXT_PUBLIC_MEMORY_MAKET_PLACE_ID ||
-    "0xaf2e76388f53404bf7805feeb23da82b5f4562ee4c997355c4160e5164e865d9",
+    "0x17d6d298533ab3912c16ca0d3bc55d59f75d851c56a494611e817fa63ac5d290",
 
   // Transfer Policy for Memory NFT
   TRANSFER_POLICY_ID:
     process.env.NEXT_PUBLIC_TRANSFER_POLICY_ID ||
-    "0xe8c0b1af849359fa76c0f60565fd6ad96f666233d2e9d3f6e3e293e07a4fe6b7",
+    "0xa854f8e6c1cdb5ed71aca385323753195e192700b6b892541d6e20e3c4106f38",
 
   // ==================== System Objects ====================
 

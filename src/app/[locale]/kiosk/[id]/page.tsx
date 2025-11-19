@@ -428,7 +428,7 @@ export default function PurchasePage() {
           <div className="lg:col-span-2">
             <div className="rounded-lg overflow-hidden shadow-lg bg-white dark:bg-jacarta-700 p-8">
               <h3 className="text-3xl font-bold mb-8 dark:text-white">
-                🛒 Complete Purchase
+                🛒 Purchase Memory NFT
               </h3>
 
               {/* Price Display */}
@@ -477,6 +477,26 @@ export default function PurchasePage() {
                     {(priceInSUI * 0.025).toFixed(6)} SUI
                   </span>
                 </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500 dark:text-jacarta-400">
+                    Gas Fee:
+                  </span>
+                  <span className="text-gray-500 dark:text-jacarta-400">
+                    ~0.01 SUI (estimated)
+                  </span>
+                </div>
+              </div>
+
+              {/* Flow Info */}
+              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="text-blue-800 dark:text-blue-300 text-sm font-semibold mb-2">
+                  💰 Payment Flow:
+                </p>
+                <ul className="text-blue-700 dark:text-blue-400 text-xs space-y-1">
+                  <li>✓ Payment stored in seller's kiosk proceeds</li>
+                  <li>✓ NFT transferred to your wallet</li>
+                  <li>✓ Seller can withdraw proceeds anytime</li>
+                </ul>
               </div>
 
               {/* Messages */}
@@ -490,11 +510,14 @@ export default function PurchasePage() {
 
               {successTx && (
                 <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <p className="text-green-600 dark:text-green-400 text-sm">
-                    ✅ Purchase successful!
+                  <p className="text-green-600 dark:text-green-400 text-sm font-semibold mb-2">
+                    ✅ Purchase Successful!
                   </p>
-                  <p className="text-green-600 dark:text-green-400 text-xs mt-2 font-mono break-all">
+                  <p className="text-green-600 dark:text-green-400 text-xs font-mono break-all">
                     {successTx}
+                  </p>
+                  <p className="text-green-700 dark:text-green-300 text-xs mt-2">
+                    Your NFT will appear in your wallet shortly...
                   </p>
                 </div>
               )}

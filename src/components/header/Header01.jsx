@@ -187,6 +187,28 @@ export default function Header01() {
                   </Link>
                 </li>
 
+                {/* seller earnings */}
+                <li className="group">
+                  <Link legacyBehavior href="/seller-earnings">
+                    <a>
+                      <button className="text-jacarta-700 font-display hover:text-accent focus:text-accent dark:hover:text-accent dark:focus:text-accent flex items-center justify-between py-3.5 text-base dark:text-white lg:px-5">
+                        <span
+                          className={
+                            isChildrenPageActive(
+                              route.asPath,
+                              "/seller-earnings"
+                            )
+                              ? "text-accent dark:text-accent"
+                              : ""
+                          }
+                        >
+                          💰 Earnings
+                        </span>
+                      </button>
+                    </a>
+                  </Link>
+                </li>
+
                 {/* claim badge */}
                 <li className="group">
                   <Link legacyBehavior href="/claim-badge">
@@ -443,6 +465,24 @@ export default function Header01() {
                       }
                     >
                       🛒 Marketplace
+                    </span>
+                  </button>
+                </a>
+              </Link>
+            </li>
+
+            <li className="group" onClick={() => setToggle(false)}>
+              <Link legacyBehavior href="/seller-earnings">
+                <a>
+                  <button className="text-jacarta-700 font-display hover:text-accent focus:text-accent dark:hover:text-accent dark:focus:text-accent flex items-center justify-between py-3.5 text-base dark:text-white lg:px-5">
+                    <span
+                      className={
+                        isChildrenPageActive("/seller-earnings", route.asPath)
+                          ? "text-accent dark:text-accent"
+                          : ""
+                      }
+                    >
+                      💰 Earnings
                     </span>
                   </button>
                 </a>
