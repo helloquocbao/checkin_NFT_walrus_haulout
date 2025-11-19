@@ -51,8 +51,6 @@ export default function PurchasePage() {
         setLoading(true);
         setError("");
 
-        console.log("🔍 Loading listing:", listingId);
-
         // Get listing object
         const listingObj = await client.getObject({
           id: listingId,
@@ -66,8 +64,6 @@ export default function PurchasePage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const listingFields = (listingObj.data.content as any).fields;
 
-        console.log("📊 Listing fields:", listingFields);
-
         // Get Memory NFT details
         const nftObj = await client.getObject({
           id: listingFields.memory_id,
@@ -76,8 +72,6 @@ export default function PurchasePage() {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const nftFields = (nftObj.data?.content as any).fields;
-
-        console.log("🎨 NFT fields:", nftFields);
 
         const listingData: KioskListing = {
           listingId: listingFields.id?.id || listingId,
@@ -122,13 +116,6 @@ export default function PurchasePage() {
     setError("");
 
     try {
-      console.log("🛒 Starting purchase process...");
-      console.log("📌 Listing ID:", listingId);
-      console.log("💰 Price (MIST):", listing.price.toString());
-      console.log("🏪 Seller address:", seller);
-
-      // 🔑 Fetch seller's kiosk ID
-      console.log("🔍 Fetching seller's kiosk...");
       const sellerKiosks = await getUserKiosks(seller);
 
       if (!sellerKiosks || sellerKiosks.length === 0) {
@@ -136,7 +123,6 @@ export default function PurchasePage() {
       }
 
       const sellerKioskId = sellerKiosks[0].id;
-      console.log("✅ Found seller kiosk:", sellerKioskId);
 
       // Create transaction to buy NFT
       const tx = new Transaction();
@@ -154,7 +140,6 @@ export default function PurchasePage() {
           paymentCoin, // payment
         ],
       });
-      console.log("✅ Transaction built, executing...");
 
       // Execute transaction
       signAndExecute(
@@ -165,8 +150,6 @@ export default function PurchasePage() {
         {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onSuccess: (result: any) => {
-            console.log("✅ Purchase successful!");
-            console.log("📜 Transaction digest:", result.digest);
             setSuccessTx(result.digest);
             setPurchasing(false);
 
@@ -493,7 +476,7 @@ export default function PurchasePage() {
                   💰 Payment Flow:
                 </p>
                 <ul className="text-blue-700 dark:text-blue-400 text-xs space-y-1">
-                  <li>✓ Payment stored in seller's kiosk proceeds</li>
+                  <li>✓ Payment stored in sellers kiosk proceeds</li>
                   <li>✓ NFT transferred to your wallet</li>
                   <li>✓ Seller can withdraw proceeds anytime</li>
                 </ul>

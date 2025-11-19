@@ -55,7 +55,7 @@ export default function NFTMapCore() {
     .filter((f) => f.latitude && f.longitude);
 
   if (typeof window === "undefined") return null;
-  console.log("validNFTs", validNFTs);
+
   return (
     <div className="h-[500px] w-full">
       <MapContainer

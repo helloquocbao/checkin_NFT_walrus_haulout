@@ -33,8 +33,6 @@ export default function KioskMarketplace() {
         setLoading(true);
         setError("");
 
-        console.log("🔍 Querying MemoryListed events...");
-
         // Query MemoryListed events to find all listings
         const events = await client.queryEvents({
           query: {
@@ -44,8 +42,6 @@ export default function KioskMarketplace() {
           order: "descending",
         });
 
-        console.log("📊 Found MemoryListed events:", events.data.length);
-
         const allListings: KioskListing[] = [];
         const processedListings = new Set<string>();
 
@@ -54,7 +50,6 @@ export default function KioskMarketplace() {
           try {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const eventData = event.parsedJson as any;
-            console.log("📌 Event data:", eventData);
 
             // Avoid duplicates
             if (
@@ -98,12 +93,6 @@ export default function KioskMarketplace() {
               };
 
               allListings.push(listing);
-              console.log(
-                "✅ Added listing:",
-                listing.name,
-                "by",
-                listing.seller.slice(0, 8)
-              );
             }
           } catch (err) {
             console.error("❌ Error processing listing:", err);
@@ -111,7 +100,6 @@ export default function KioskMarketplace() {
           }
         }
 
-        console.log("📊 Total listings loaded:", allListings.length);
         setListings(allListings);
       } catch (err) {
         console.error("❌ Error loading listings:", err);

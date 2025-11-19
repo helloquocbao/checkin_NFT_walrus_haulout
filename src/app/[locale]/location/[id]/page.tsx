@@ -88,15 +88,11 @@ export default function LocationDetailPage() {
               if (profile?.data?.content) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const profileFields = (profile.data.content as any).fields;
-                console.log("Profile fields:", profileFields);
-                console.log(
-                  "Claimed badges from profile:",
-                  profileFields.claimed_badges
-                );
+
                 setUserProfile(profile as unknown as ProfileData);
 
                 // Extract badges - handle both direct objects and nested .fields
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 const badges = (profileFields.claimed_badges || []).map(
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   (badge: any) => {
@@ -106,7 +102,6 @@ export default function LocationDetailPage() {
                 );
 
                 setUserBadges(badges);
-                console.log("Set userBadges:", badges);
               }
             }
           } catch (err) {
@@ -151,11 +146,11 @@ export default function LocationDetailPage() {
           transaction: tx as any,
         },
         {
-          onSuccess: (result) => {
+          onSuccess: () => {
             alert(
               "Badge claimed successfully! Check your profile for the new badge."
             );
-            console.log("Badge claimed:", result);
+
             // Reload the page to get updated badge info
             setTimeout(() => {
               window.location.reload();
@@ -227,8 +222,6 @@ export default function LocationDetailPage() {
   };
 
   const userBadge = userBadges.find((badge) => {
-    // Debug log
-    console.log("Badge:", badge, "locationId:", locationId);
     // Ép kiểu location_id về số nếu cần
     return Number(badge.location_id) === Number(locationId);
   });

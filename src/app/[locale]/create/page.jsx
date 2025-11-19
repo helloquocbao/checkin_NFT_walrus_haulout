@@ -106,7 +106,6 @@ export default function Create() {
       }
 
       const info = await response.json();
-      console.log("✅ Walrus upload info:", info);
 
       const newBlobId =
         info?.newlyCreated?.blobObject?.blobId || info?.blobObject?.blobId;
@@ -158,8 +157,6 @@ export default function Create() {
         { transaction: tx },
         {
           onSuccess: async (result) => {
-            console.log("Memory minted successfully:", result);
-
             // Wait for transaction to finalize
             const txDetails = await client.waitForTransaction({
               digest: result.digest,
@@ -181,7 +178,7 @@ export default function Create() {
               });
 
               const fields = nftObject.data?.content?.fields;
-              console.log("Minted Memory NFT details:", fields);
+
               setNftInfo({
                 id: createdObject.objectId,
                 name: fields?.name || inputText || "My Memory",

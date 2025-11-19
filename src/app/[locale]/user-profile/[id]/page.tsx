@@ -126,9 +126,6 @@ export default function UserProfilePage() {
           try {
             const actualVotes = await getActualVoteCount(profileOwnerAddress);
             profileData.verify_votes = actualVotes;
-            console.log(
-              `Actual votes for ${profileOwnerAddress}: ${actualVotes}`
-            );
           } catch (err) {
             console.error("Failed to get actual votes:", err);
             // Keep the value from profile
@@ -195,13 +192,12 @@ export default function UserProfilePage() {
         // Load user's kiosk listings
         try {
           const allListings = await getKioskItems();
-          console.log("🔍 All listings found:", allListings.length);
-          console.log("📊 Looking for listings from seller:", fields.owner);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           const userListings = allListings.filter(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (item: any) => item.seller === fields.owner
           );
-          console.log("✅ User listings found:", userListings.length);
+
           setKioskListings(userListings as KioskListing[]);
         } catch (err) {
           console.error("Error loading kiosk listings:", err);
@@ -297,8 +293,7 @@ export default function UserProfilePage() {
           transaction: tx as any,
         },
         {
-          onSuccess: (result) => {
-            console.log("Vote successful:", result);
+          onSuccess: () => {
             setToastMessage({
               type: "success",
               message: "Vote successful! ✓",
@@ -356,8 +351,7 @@ export default function UserProfilePage() {
           transaction: tx as any,
         },
         {
-          onSuccess: (result) => {
-            console.log("Claim verification successful:", result);
+          onSuccess: () => {
             setToastMessage({
               type: "success",
               message: "Verification claimed! ✓",

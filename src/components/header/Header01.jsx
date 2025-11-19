@@ -22,6 +22,8 @@ export default function Header01() {
   const client = useSuiClient();
   const [balance, setBalance] = useState(null);
 
+  const { push } = useRouter();
+
   useEffect(() => {
     if (account?.address) {
       client.getBalance({ owner: account.address }).then((res) => {
@@ -152,7 +154,7 @@ export default function Header01() {
 
             <div className="ml-8 hidden items-center lg:flex xl:ml-12">
               <WalletButton />
-              {/* End metamask Wallet */}
+              <div onClick={() => push("/my-profile")}>user</div>
             </div>
             {/* End header right content (metamask and other) for desktop */}
           </div>

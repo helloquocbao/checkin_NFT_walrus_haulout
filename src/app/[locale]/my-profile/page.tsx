@@ -139,11 +139,12 @@ export default function MyProfilePage() {
 
               // Method 1: Query all MemoryListing objects and filter by seller
               const allListings = await getKioskItems();
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
               const userListings = allListings.filter(
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (item: any) => item.seller === currentAccount.address
               );
-              console.log("User listings from all listings:", userListings);
+
               if (userListings.length > 0) {
                 listings = userListings as KioskListing[];
               }
@@ -160,7 +161,6 @@ export default function MyProfilePage() {
                 listings = await getUserKioskListings(currentAccount.address);
               }
 
-              console.log("Final kiosk listings:", listings);
               setKioskListings(listings);
             }
           }

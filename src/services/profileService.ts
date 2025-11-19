@@ -258,6 +258,7 @@ export const getVerificationStatus = async (profileId: string) => {
     const profile = await getProfileDetails(profileId);
     if (!profile || !profile.data?.content) return null;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const content = profile.data.content as any;
     return {
       isVerified: content.fields.is_verified || false,
@@ -312,11 +313,8 @@ export const getActualVoteCount = async (profileOwnerAddress: string) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const fieldContent = tableData.data.content as any;
       const voteCount = parseInt(fieldContent.fields?.value || "0");
-      console.log(`Vote count for ${profileOwnerAddress}: ${voteCount}`);
       return voteCount;
     } catch {
-      // Key doesn't exist in table = 0 votes
-      console.log("No votes found for address:", profileOwnerAddress);
       return 0;
     }
   } catch (error) {
@@ -391,6 +389,7 @@ export const getProfileBadges = async (profileId: string) => {
     if (!Array.isArray(claimedBadges)) return [];
 
     // Convert vector of ClaimedBadgeInfo to Badge format
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return claimedBadges.map((badge: any) => ({
       location_id: Number(badge.location_id) || 0,
       location_name: badge.location_name || "",
@@ -450,13 +449,13 @@ export const getUserKiosks = async (userAddress: string) => {
     });
 
     if (!caps.data || caps.data.length === 0) {
-      console.log("ℹ️  No kiosk found for user");
       return [];
     }
 
     // User has a KioskOwnerCap - extract the kiosk ID from cap content
     const kioskList = caps.data
       .map((cap) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const capContent = cap.data?.content as any;
         const kioskId = capContent?.fields?.for;
         return {
@@ -466,7 +465,6 @@ export const getUserKiosks = async (userAddress: string) => {
       })
       .filter((k) => k.id);
 
-    console.log("✅ Found kiosks for user:", kioskList);
     return kioskList;
   } catch (error) {
     console.error("Error getting user kiosks:", error);
@@ -642,12 +640,10 @@ export const getUserKioskListings = async (userAddress: string) => {
     const kiosks = await getUserKiosks(userAddress);
 
     if (!kiosks || kiosks.length === 0) {
-      console.log("ℹ️  No kiosk found for user, cannot load kiosk listings");
       return [];
     }
 
     const kioskId = kiosks[0].id;
-    console.log("🔍 Looking for listings in kiosk:", kioskId);
 
     // Query MemoryListed events to find listings in this kiosk
     const events = await suiClient.queryEvents({
@@ -658,8 +654,6 @@ export const getUserKioskListings = async (userAddress: string) => {
       order: "descending",
     });
 
-    console.log("📊 Found total MemoryListed events:", events.data.length);
-
     const kioskListings = [];
 
     // For each event, get listing and filter by seller address
@@ -667,7 +661,6 @@ export const getUserKioskListings = async (userAddress: string) => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const eventData = event.parsedJson as any;
-        console.log("📌 Event data:", eventData);
 
         // Get listing object by ID from event
         if (eventData?.listing_id) {
@@ -684,12 +677,6 @@ export const getUserKioskListings = async (userAddress: string) => {
             const fields = (listing.data.content as any).fields;
 
             // Filter by seller address - only show listings from this user
-            console.log(
-              "👤 Listing seller:",
-              fields.seller,
-              "Looking for:",
-              userAddress
-            );
 
             if (fields.seller === userAddress) {
               try {
@@ -746,7 +733,6 @@ export const getUserKioskListings = async (userAddress: string) => {
       }
     }
 
-    console.log("✅ Found kiosk listings:", kioskListings.length);
     return kioskListings;
   } catch (error) {
     console.error("Error getting user kiosk listings:", error);
@@ -764,12 +750,10 @@ export const getUserKioskListingsAlt = async (userAddress: string) => {
     const kiosks = await getUserKiosks(userAddress);
 
     if (!kiosks || kiosks.length === 0) {
-      console.log("ℹ️  No kiosk found for user, cannot load kiosk listings");
       return [];
     }
 
     const kioskId = kiosks[0].id;
-    console.log("🔍 Looking for MemoryListing objects in kiosk:", kioskId);
 
     // Query MemoryListing objects by type
     const objects = await suiClient.getOwnedObjects({
@@ -782,11 +766,6 @@ export const getUserKioskListingsAlt = async (userAddress: string) => {
       },
     });
 
-    console.log(
-      "📊 Found MemoryListing objects in kiosk:",
-      objects.data.length
-    );
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const kioskListings: any[] = [];
 
@@ -796,8 +775,6 @@ export const getUserKioskListingsAlt = async (userAddress: string) => {
         if (obj.data?.content) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const fields = (obj.data.content as any).fields;
-
-          console.log("📌 Listing object:", fields);
 
           // Try to get Memory NFT details
           try {
@@ -851,7 +828,6 @@ export const getUserKioskListingsAlt = async (userAddress: string) => {
       }
     }
 
-    console.log("✅ Found kiosk listings (alt method):", kioskListings.length);
     return kioskListings;
   } catch (error) {
     console.error("Error getting user kiosk listings (alt):", error);
@@ -865,8 +841,6 @@ export const getUserKioskListingsAlt = async (userAddress: string) => {
  */
 export const getKioskItems = async () => {
   try {
-    console.log("🔍 Querying MemoryListing objects using events");
-
     // Query MemoryListed events to find all listings
     const events = await suiClient.queryEvents({
       query: {
@@ -875,8 +849,6 @@ export const getKioskItems = async () => {
       limit: 200,
       order: "descending",
     });
-
-    console.log("📊 Found MemoryListed events:", events.data.length);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const items: any[] = [];
@@ -887,7 +859,6 @@ export const getKioskItems = async () => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const eventData = event.parsedJson as any;
-        console.log("📌 Event data:", eventData);
 
         if (
           eventData?.listing_id &&
@@ -906,8 +877,6 @@ export const getKioskItems = async () => {
           if (listing.data?.content) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const fields = (listing.data.content as any).fields;
-
-            console.log("🔗 Listing seller:", fields.seller);
 
             // Try to get Memory NFT details
             try {
@@ -962,7 +931,6 @@ export const getKioskItems = async () => {
       }
     }
 
-    console.log("✅ Found total items from events:", items.length);
     return items;
   } catch (error) {
     console.error("Error getting kiosk items:", error);
