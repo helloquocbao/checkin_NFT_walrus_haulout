@@ -36,8 +36,6 @@ export default function SellerEarningsPage() {
         setLoading(true);
         setError("");
 
-        console.log("🔍 Loading kiosk for:", account.address);
-
         // Get user's kiosk
         const kiosks = await getUserKiosks(account.address);
 
@@ -48,7 +46,6 @@ export default function SellerEarningsPage() {
         }
 
         const kioskId = kiosks[0].id;
-        console.log("✅ Found kiosk:", kioskId);
 
         // Get kiosk object to check proceeds
         const kioskObj = await client.getObject({
@@ -62,8 +59,6 @@ export default function SellerEarningsPage() {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const kioskFields = (kioskObj.data.content as any).fields;
-
-        console.log("📋 Full kiosk fields:", kioskFields);
 
         // Profits có thể là balance object
         let proceeds = BigInt(0);
@@ -79,14 +74,11 @@ export default function SellerEarningsPage() {
           }
         }
 
-        console.log("💰 Proceeds:", proceeds.toString());
-
         setKiosk({
           id: kioskId,
           proceeds,
         });
       } catch (err) {
-        console.error("❌ Error loading kiosk:", err);
         setError(err instanceof Error ? err.message : "Failed to load kiosk");
       } finally {
         setLoading(false);
@@ -112,9 +104,6 @@ export default function SellerEarningsPage() {
     setError("");
 
     try {
-      console.log("💳 Starting withdraw...");
-      console.log("📌 Kiosk ID:", kiosk.id);
-
       // Get KioskOwnerCap
       const caps = await client.getOwnedObjects({
         owner: account.address,
@@ -135,7 +124,6 @@ export default function SellerEarningsPage() {
       if (!capId) {
         throw new Error("Cannot find KioskOwnerCap ID");
       }
-      console.log("✅ Found cap:", capId);
 
       // Create transaction
       const tx = new Transaction();
@@ -150,8 +138,6 @@ export default function SellerEarningsPage() {
         ],
       });
 
-      console.log("✅ Transaction built, executing...");
-
       // Execute transaction
       signAndExecute(
         {
@@ -161,8 +147,6 @@ export default function SellerEarningsPage() {
         {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onSuccess: (result: any) => {
-            console.log("✅ Withdraw successful!");
-            console.log("📜 Transaction digest:", result.digest);
             setSuccessTx(result.digest);
             setWithdrawing(false);
 
@@ -172,14 +156,12 @@ export default function SellerEarningsPage() {
             }, 2000);
           },
           onError: (err) => {
-            console.error("❌ Withdraw failed:", err);
             setError(err instanceof Error ? err.message : "Withdraw failed");
             setWithdrawing(false);
           },
         }
       );
     } catch (err) {
-      console.error("❌ Error during withdraw:", err);
       setError(err instanceof Error ? err.message : "An error occurred");
       setWithdrawing(false);
     }

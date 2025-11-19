@@ -23,6 +23,7 @@
     "browser-image-compression": "^2.0.2",
     "chart.js": "^3.8.0",
     "leaflet": "^1.9.4",
+    "lucide-react": "^0.554.0",
     "metamask-react": "^2.4.0",
     "moment": "^2.29.4",
     "next": "14.2.33",

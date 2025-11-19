@@ -67,41 +67,23 @@ export default function ClaimBadgePage() {
 
         // Load user profile only if connected
         if (currentAccount?.address) {
-          console.log("Current account address:", currentAccount.address);
           const profileExists = await hasProfile(currentAccount.address);
-          console.log("Profile exists:", profileExists);
 
           if (profileExists) {
             const profile = await getProfileByAddress(currentAccount.address);
-            console.log("Full profile data:", profile);
-            console.log(
-              "Profile data structure:",
-              JSON.stringify(profile, null, 2)
-            );
 
             if (profile?.data?.content) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const profileFields = (profile.data.content as any).fields;
-              console.log("Profile fields:", profileFields);
 
               // claimed_badges giờ là array of ClaimedBadgeInfo objects
               const claimedBadges = profileFields.claimed_badges || [];
-              console.log("Claimed badges raw:", claimedBadges);
-              console.log("Claimed badges type:", typeof claimedBadges);
-              console.log(
-                "Claimed badges length:",
-                Array.isArray(claimedBadges)
-                  ? claimedBadges.length
-                  : "not an array"
-              );
 
               // Map ClaimedBadgeInfo objects directly
               const badgesWithDetails: Badge[] = Array.isArray(claimedBadges)
                 ? claimedBadges.map(
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (badgeInfo: any) => {
-                      console.log("Processing badge info:", badgeInfo);
-
                       // Handle both plain object and Sui object with .fields
                       const data = badgeInfo.fields
                         ? badgeInfo.fields
@@ -132,12 +114,12 @@ export default function ClaimBadgePage() {
                         perfection,
                         created_at: createdAt,
                       };
-                      console.log("Mapped badge:", badge);
+
                       return badge;
                     }
                   )
                 : [];
-              console.log("Badges with details:", badgesWithDetails);
+
               setUserProfile(profile as unknown as ProfileData);
               setUserBadges(badgesWithDetails);
             }
@@ -177,10 +159,8 @@ export default function ClaimBadgePage() {
         },
         {
           onSuccess: async (result) => {
-            console.log("Badge claimed transaction result:", result);
-
             // Extract badge details từ transaction events
-            let badgeDetails = {
+            const badgeDetails = {
               rarity: 0,
               perfection: 500,
             };
@@ -188,25 +168,16 @@ export default function ClaimBadgePage() {
             // Parse events từ transaction result
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const resultData = result as any;
-            console.log("Transaction result data:", resultData);
-            console.log(
-              "Full transaction result:",
-              JSON.stringify(resultData, null, 2)
-            );
 
             if (resultData?.effects?.events) {
-              console.log("Total events:", resultData.effects.events.length);
               for (const event of resultData.effects.events) {
-                console.log("Event type:", event.type);
-                console.log("Event full:", JSON.stringify(event, null, 2));
                 if (event.type?.includes("BadgeGachaResult")) {
                   const eventData = event.parsedJson as Record<string, unknown>;
                   if (eventData) {
-                    console.log("Found BadgeGachaResult event:", eventData);
                     badgeDetails.rarity = (eventData.rarity as number) || 0;
                     badgeDetails.perfection =
                       (eventData.perfection as number) || 500;
-                    console.log("Badge Gacha Result:", badgeDetails);
+
                     break;
                   }
                 }
@@ -427,16 +398,6 @@ export default function ClaimBadgePage() {
                 (badge) => badge.location_id === location.id
               );
               const hasBadge = !!userBadge;
-
-              // Debug log
-              if (userBadges.length > 0) {
-                console.log(`Location ${location.id}:`, {
-                  location_id: location.id,
-                  userBadges: userBadges,
-                  found: userBadge,
-                  hasBadge: hasBadge,
-                });
-              }
 
               return (
                 <div
