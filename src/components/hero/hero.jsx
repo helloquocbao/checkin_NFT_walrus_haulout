@@ -1,5 +1,9 @@
 import Link from "next/link";
-
+import "swiper/css";
+import "swiper/css/navigation";
+import { HeadLine } from "../component";
+import "tippy.js/dist/tippy.css";
+import BidsCarousel from "../carousel/bidsCarousel";
 const hero = () => {
   return (
     <section className="relative pb-10 pt-20 md:pt-32 h-1527">
@@ -57,6 +61,18 @@ const hero = () => {
               />
             </div>
           </div>
+        </div>
+      </div>
+      <div className="container">
+        <HeadLine
+          text="User Profiles"
+          image="https://cdn.jsdelivr.net/npm/emoji-datasource-apple@7.0.2/img/apple/64/1f525.png"
+          classes="font-display text-jacarta-700 mb-8 text-center text-3xl dark:text-white"
+        />
+
+        <div className="relative">
+          {/* <!-- Slider --> */}
+          <BidsCarousel />
         </div>
       </div>
     </section>

@@ -937,3 +937,52 @@ export const getKioskItems = async () => {
     return [];
   }
 };
+
+// Lấy tối đa 20 profile NFT đã mint
+
+// Lấy tối đa N profile NFT đã mint
+export const getListNFTProfile = async (limit = 10) => {
+  try {
+    const events = await suiClient.queryEvents({
+      query: {
+        MoveEventType: `${CONTRACT_CONFIG.PACKAGE_ID}::profiles::ProfileCreated`,
+      },
+      limit,
+      order: "descending",
+    });
+
+    // Parse event data to get profile object IDs
+    // SuiEvent type: { parsedJson: unknown, ... }
+
+    const profileIds = events.data
+      .map((event: { parsedJson?: unknown }) => {
+        if (
+          event.parsedJson &&
+          typeof event.parsedJson === "object" &&
+          "profile_id" in event.parsedJson
+        ) {
+          const pid = (event.parsedJson as { profile_id?: string }).profile_id;
+          return typeof pid === "string" ? pid : undefined;
+        }
+        return undefined;
+      })
+      .filter((id): id is string => typeof id === "string" && !!id);
+    const profiles = [];
+    for (const profileId of profileIds) {
+      try {
+        const profileObj = await suiClient.getObject({
+          id: profileId,
+          options: { showContent: true, showDisplay: true, showOwner: true },
+        });
+        profiles.push(profileObj);
+      } catch {
+        // Skip if cannot fetch profile
+        continue;
+      }
+    }
+    return profiles;
+  } catch (error) {
+    console.error("Error getting NFT profiles:", error);
+    return [];
+  }
+};
