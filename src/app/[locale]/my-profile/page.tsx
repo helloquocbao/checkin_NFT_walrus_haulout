@@ -9,7 +9,6 @@ import {
   mintProfile,
   updateProfile,
   getUserMemoryNFTs,
-  getProfileBadges,
   getUserKiosks,
   getUserKioskCaps,
   listMemoryNFTToKiosk,
@@ -20,6 +19,7 @@ import {
 } from "@/services/profileService";
 import { useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 import { uploadImageToWalrus, getWalrusUrl } from "@/utils/walrusUpload";
+import Tippy from "@tippyjs/react";
 
 interface Badge {
   location_id: number;
@@ -47,7 +47,11 @@ interface ProfileData {
   name: string;
   bio: string;
   avatarUrl: string;
-  badges: Badge[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  badges: any[];
+  created_at: string;
+  country: string;
+  isVerified?: boolean;
 }
 
 interface KioskListing {
@@ -69,9 +73,10 @@ interface KioskListing {
 export default function MyProfilePage() {
   const currentAccount = useCurrentAccount();
   const { mutate: signAndExecute } = useSignAndExecuteTransaction();
-
+  const [imageModal, setImageModal] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [profileData, setProfileData] = useState<any>(null);
   const [memoryNFTs, setMemoryNFTs] = useState<MemoryNFT[]>([]);
   const [kioskListings, setKioskListings] = useState<KioskListing[]>([]);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
@@ -84,7 +89,14 @@ export default function MyProfilePage() {
   const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(
     null
   );
-
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
   // Form states
   const [formData, setFormData] = useState({
     name: "",
@@ -103,29 +115,30 @@ export default function MyProfilePage() {
           const profileExists = await hasProfile(currentAccount.address);
           if (profileExists) {
             const profile = await getProfileByAddress(currentAccount.address);
+
             if (profile?.data?.content) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const fields = (profile.data.content as any).fields;
-              const profileInfo = {
+              const profileData: any = {
                 objectId: profile.data.objectId,
                 name: fields.name || "",
                 bio: fields.bio || "",
                 avatarUrl: fields.avatar_url || "",
-                badges: fields.badges || [],
+                badges:
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  fields.claimed_badges.map((badge: any) => ({
+                    ...badge.fields,
+                  })) || [],
+                created_at: fields.created_at,
+                country: fields.country || "",
+                isVerified: fields.isVerified || false,
               };
-              setProfileData(profileInfo);
+              console.log("Loaded profile data:", profileData);
+              setProfileData(profileData);
               setFormData({
-                name: profileInfo.name,
-                bio: profileInfo.bio,
-                avatarUrl: profileInfo.avatarUrl,
-              });
-
-              // Load badges from claimed_badges table
-              const badges = await getProfileBadges(profile.data.objectId);
-
-              setProfileData({
-                ...profileInfo,
-                badges: badges as Badge[],
+                name: profileData.name,
+                bio: profileData.bio,
+                avatarUrl: profileData.avatarUrl,
               });
 
               // Load user's memory NFTs
@@ -794,71 +807,203 @@ export default function MyProfilePage() {
 
       <div className=" container mx-auto">
         {/* ============ 1. PROFILE HEADER ============ */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg p-8 text-blue-50">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Avatar */}
-            <div className="flex justify-center md:justify-start">
-              {profileData.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
+        <div className="md:flex md:flex-wrap">
+          <figure className="mb-8 md:w-2/5 md:flex-shrink-0 md:flex-grow-0 md:basis-auto lg:w-1/2 w-full">
+            <button className=" w-full" onClick={() => setImageModal(true)}>
+              <img
+                src={profileData?.avatarUrl}
+                alt={"title"}
+                className="rounded-2xl cursor-pointer  w-full"
+              />
+            </button>
+
+            {/* <!-- Modal --> */}
+            <div
+              className={imageModal ? "modal fade show block" : "modal fade"}
+            >
+              <div className="modal-dialog !my-0 flex h-full max-w-4xl items-center justify-center">
                 <img
-                  src={profileData.avatarUrl}
-                  alt={profileData.name}
-                  className="w-32 h-32 rounded-full object-cover border-4 border-blue-50 shadow-lg"
+                  src={profileData?.avatarUrl}
+                  alt={"ád"}
+                  className="h-full rounded-2xl"
                 />
-              ) : (
-                <div className="w-32 h-32 rounded-full bg-blue-400 flex items-center justify-center text-5xl shadow-lg">
-                  👤
-                </div>
-              )}
+              </div>
+
+              <button
+                type="button"
+                className="btn-close absolute top-6 right-6"
+                onClick={() => setImageModal(false)}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  height="24"
+                  className="h-6 w-6 fill-white"
+                >
+                  <path fill="none" d="M0 0h24v24H0z" />
+                  <path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" />
+                </svg>
+              </button>
+            </div>
+            {/* <!-- end modal --> */}
+          </figure>
+          <div className="md:w-3/5 md:basis-auto md:pl-8 lg:w-1/2 lg:pl-[3.75rem]">
+            {/* <!-- Collection / Likes / Actions --> */}
+            <div className="mb-3 flex">
+              {/* <!-- Collection --> */}
+              <div className="flex items-center">
+                <a className="text-accent mr-2 text-sm font-bold">
+                  NFT Profile
+                </a>
+              </div>
             </div>
 
-            {/* Profile Info */}
-            <div className="md:col-span-3">
-              <h1 className="text-4xl font-bold mb-2">{profileData.name}</h1>
-              <p className="text-blue-100 mb-6 text-lg leading-relaxed">
-                {profileData.bio}
-              </p>
+            <h1 className="font-display text-jacarta-700 mb-4 text-4xl font-semibold dark:text-white">
+              {profileData?.name}
+            </h1>
 
-              {/* Stats */}
-              <div className="grid grid-cols-4 gap-4">
-                <div className="bg-blue-400 bg-opacity-30 rounded-lg p-3 backdrop-blur">
-                  <div className="text-2xl font-bold">
-                    {profileData.badges.length}
-                  </div>
-                  <div className="text-xs text-blue-100">Badges</div>
+            <div className="mb-8 flex items-center space-x-4 whitespace-nowrap">
+              <div className="flex items-center">
+                <Tippy content={<span>SUI</span>}>
+                  <span className="mr-1">
+                    <svg
+                      className=" w-4 h-4 "
+                      viewBox="0 0 300 384"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        clip-rule="evenodd"
+                        d="M240.057 159.914C255.698 179.553 265.052 204.39 265.052 231.407C265.052 258.424 255.414 284.019 239.362 303.768L237.971 305.475L237.608 303.31C237.292 301.477 236.929 299.613 236.502 297.749C228.46 262.421 202.265 232.134 159.148 207.597C130.029 191.071 113.361 171.195 108.985 148.586C106.157 133.972 108.258 119.294 112.318 106.717C116.379 94.1569 122.414 83.6187 127.549 77.2831L144.328 56.7754C147.267 53.1731 152.781 53.1731 155.719 56.7754L240.073 159.914H240.057ZM266.584 139.422L154.155 1.96703C152.007 -0.655678 147.993 -0.655678 145.845 1.96703L33.4316 139.422L33.0683 139.881C12.3868 165.555 0 198.181 0 233.698C0 316.408 67.1635 383.461 150 383.461C232.837 383.461 300 316.408 300 233.698C300 198.181 287.613 165.555 266.932 139.896L266.568 139.438L266.584 139.422ZM60.3381 159.472L70.3866 147.164L70.6868 149.439C70.9237 151.24 71.2239 153.041 71.5715 154.858C78.0809 189.001 101.322 217.456 140.173 239.496C173.952 258.724 193.622 280.828 199.278 305.064C201.648 315.176 202.059 325.129 201.032 333.835L200.969 334.372L200.479 334.609C185.233 342.05 168.09 346.237 149.984 346.237C86.4546 346.237 34.9484 294.826 34.9484 231.391C34.9484 204.153 44.4439 179.142 60.3065 159.44L60.3381 159.472Z"
+                        fill="#4DA2FF"
+                      />
+                    </svg>
+                  </span>
+                </Tippy>
+                <span className="text-green text-sm font-medium tracking-tight">
+                  SUI Chain NFT
+                </span>
+              </div>
+              <span className="dark:text-jacarta-300 text-jacarta-400 text-sm">
+                Create: {profileData?.created_at}
+              </span>
+              <span className="dark:text-jacarta-300 text-jacarta-400 text-sm">
+                Country:{" "}
+                {profileData?.country !== "" ? profileData?.country : "N/A"}
+              </span>
+            </div>
+
+            <p className="dark:text-jacarta-300 mb-10 line-clamp-3">
+              {profileData?.bio}
+            </p>
+
+            {/* <!-- Creator / Owner --> */}
+            <div className="mb-8 ml-2 flex flex-wrap">
+              <div className="mr-8 mb-4 flex">
+                <figure className="mr-4 shrink-0">
+                  <a className="relative block">
+                    <div
+                      className="dark:border-jacarta-600 bg-green absolute -right-3 top-[60%] flex h-6 w-6 items-center justify-center rounded-full border-2 border-white"
+                      data-tippy-content="Verified Collection"
+                    >
+                      <Tippy content={<span>Verified Collection</span>}>
+                        <svg className="icon h-[.875rem] w-[.875rem] fill-white">
+                          <use xlinkHref="/icons.svg#icon-right-sign"></use>
+                        </svg>
+                      </Tippy>
+                    </div>
+                  </a>
+                </figure>
+                <div className="flex flex-col justify-center">
+                  <span className="text-jacarta-400 block text-sm dark:text-white">
+                    Total <strong> claim Badge</strong>
+                  </span>
+
+                  <a className="text-accent block">
+                    <span className="text-sm font-bold">
+                      {profileData?.badges?.length} badge
+                    </span>
+                  </a>
                 </div>
-                <div className="bg-blue-400 bg-opacity-30 rounded-lg p-3 backdrop-blur">
-                  <div className="text-2xl font-bold">{memoryNFTs.length}</div>
-                  <div className="text-xs text-blue-100">Memories</div>
-                </div>
-                <div className="bg-blue-400 bg-opacity-30 rounded-lg p-3 backdrop-blur">
-                  <div className="text-2xl font-bold">
-                    {(
-                      profileData.badges.reduce(
-                        (sum, b) => sum + b.perfection,
-                        0
-                      ) / Math.max(profileData.badges.length, 1)
-                    ).toFixed(0)}
-                  </div>
-                  <div className="text-xs text-blue-100">Avg Perf.</div>
-                </div>
-                <div className="bg-blue-400 bg-opacity-30 rounded-lg p-3 backdrop-blur">
-                  <div className="text-2xl font-bold">
-                    {(
-                      (profileData.badges.reduce(
-                        (sum, b) => sum + b.perfection,
-                        0
-                      ) /
-                        Math.max(profileData.badges.length, 1) /
-                        10) *
-                      100
-                    ).toFixed(0)}
-                    %
-                  </div>
-                  <div className="text-xs text-blue-100">Overall</div>
+              </div>
+
+              <div className="mb-4 flex">
+                <figure className="mr-4 shrink-0">
+                  <a className="relative block">
+                    <div
+                      className="dark:border-jacarta-600 bg-green absolute -right-3 top-[60%] flex h-6 w-6 items-center justify-center rounded-full border-2 border-white"
+                      data-tippy-content="Verified Collection"
+                    >
+                      <Tippy content={<span>Verified Collection</span>}>
+                        <svg className="icon h-[.875rem] w-[.875rem] fill-white">
+                          <use xlinkHref="/icons.svg#icon-right-sign"></use>
+                        </svg>
+                      </Tippy>
+                    </div>
+                  </a>
+                </figure>
+                <div className="flex flex-col justify-center">
+                  <span className="text-jacarta-400 block text-sm dark:text-white">
+                    Checkin
+                  </span>
+
+                  <a className="text-accent block">
+                    <span className="text-sm font-bold">
+                      {profileData?.badges?.length} Location
+                    </span>
+                  </a>
                 </div>
               </div>
             </div>
+
+            {/* <!-- Bid --> */}
+            <div className="dark:bg-jacarta-700 dark:border-jacarta-600 border-jacarta-100 rounded-2lg border bg-white p-8 mb-3">
+              <div className="mb-8 sm:flex sm:flex-wrap">
+                {/* <!-- Highest bid --> */}
+                <div className="w-full">
+                  <div className="block overflow-hidden text-ellipsis whitespace-nowrap">
+                    <a
+                      href={`https://suiscan.xyz/testnet/object/${profileData?.objectId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <span className="dark:text-jacarta-300 text-jacarta-400 text-sm">
+                        NFT onchain:{" "}
+                      </span>
+                      <span className="text-accent text-sm font-bold">
+                        {profileData?.objectId}
+                      </span>
+                    </a>
+                  </div>
+                  <div className="mt-3 ">
+                    <p className="text-gray-600 text-center mb-4">
+                      <span className="text-blue-600 font-bold">
+                        <span>
+                          Verified status:{" "}
+                          {profileData?.isVerified ? (
+                            <span
+                              className="dark:border-jacarta-600 bg-green inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-white"
+                              data-tippy-content="Verified Collection"
+                            >
+                              <Tippy content={<span>Verified Collection</span>}>
+                                <svg className="icon h-[.875rem] w-[.875rem] fill-white">
+                                  <use xlinkHref="/icons.svg#icon-right-sign"></use>
+                                </svg>
+                              </Tippy>
+                            </span>
+                          ) : (
+                            " Not Verified"
+                          )}
+                        </span>
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* <!-- end bid --> */}
           </div>
         </div>
 
@@ -896,37 +1041,65 @@ export default function MyProfilePage() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Avatar URL
+                Avatart image
               </label>
-              <input
-                type="url"
-                value={formData.avatarUrl}
-                onChange={(e) =>
-                  setFormData({ ...formData, avatarUrl: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 text-sm"
-              />
-              <label className="block text-xs text-gray-600 mt-2 cursor-pointer">
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Upload Box */}
+              <label className="block text-xs text-gray-600 cursor-pointer">
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleAvatarUpload}
                   className="hidden"
                 />
-                <span className="text-blue-600 hover:text-blue-700">
-                  📤 Select new image
-                </span>
+
+                <div className="dark:bg-jacarta-700 dark:border-jacarta-600 border-jacarta-100 group flex flex-col items-center justify-center rounded-lg border-2 border-dashed bg-white py-20 px-5 text-center h-full">
+                  <div className="relative z-10 cursor-pointer">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      height="24"
+                      className="fill-jacarta-500 mb-4 inline-block dark:fill-white"
+                    >
+                      <path fill="none" d="M0 0h24v24H0z" />
+                      <path d="M16 13l6.964 4.062-2.973.85 2.125 3.681-1.732 1-2.125-3.68-2.223 2.15L16 13zm-2-7h2v2h5a1 1 0 0 1 1 1v4h-2v-3H10v10h4v2H9a1 1 0 0 1-1-1v-5H6v-2h2V9a1 1 0 0 1 1-1h5V6zM4 14v2H2v-2h2zm0-4v2H2v-2h2zm0-4v2H2V6h2zm0-4v2H2V2h2zm4 0v2H6V2h2zm4 0v2h-2V2h2zm4 0v2h-2V2h2z" />
+                    </svg>
+
+                    <p className="dark:text-jacarta-300 mx-auto max-w-xs text-xs">
+                      JPG, PNG, GIF — Max size: 10MB
+                    </p>
+                  </div>
+                </div>
               </label>
-              {avatarPreview && (
-                <p className="text-xs text-blue-600 mt-1 font-semibold">
-                  ✓ Selected (will upload on Save)
-                </p>
+
+              {/* Image Preview */}
+              {avatarPreview ? (
+                <div className="flex flex-col items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={avatarPreview}
+                    alt="Avatar Preview"
+                    width={250}
+                    height={250}
+                    className=" object-cover border shadow-md"
+                  />
+                  <p className="text-xs text-blue-600 mt-2 font-semibold">
+                    ✓ Preview loaded (will upload on Save)
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center text-gray-400 text-sm">
+                  No preview selected
+                </div>
               )}
             </div>
             <button
+              style={{ backgroundColor: "#78B9B5" }}
               onClick={handleUpdateProfile}
               disabled={updating || !formData.name.trim()}
-              className={`w-full py-2 rounded-lg font-semibold text-sm transition-colors ${
+              className={`w-full py-3 rounded-lg mt-3 font-semibold text-sm transition-colors ${
                 updating || !formData.name.trim()
                   ? "bg-gray-300 text-gray-600 cursor-not-allowed"
                   : "bg-blue-500 text-gray-900 hover:bg-blue-600"
@@ -943,11 +1116,11 @@ export default function MyProfilePage() {
 
         {/* ============ 3. BADGES COLLECTION ============ */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+          <div className="flex flex-col lg:flex-row items-center justify-between my-3">
+            <h2 className="lg:text-3xl font-bold text-gray-900 flex items-center gap-2">
               🏆 My Badges Collection
-              <span className="text-lg bg-blue-100 text-blue-600 px-3 py-1 rounded-full">
-                {profileData.badges.length}
+              <span className="lg:text-lg bg-blue-100 text-blue-600 px-3 py-1 rounded-full">
+                ({profileData.badges.length})
               </span>
             </h2>
             <Link
@@ -960,84 +1133,79 @@ export default function MyProfilePage() {
 
           {profileData.badges.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {profileData.badges.map((badge, index) => (
-                <Link
-                  key={index}
-                  href={`/location/${badge.location_id}`}
-                  className="group"
-                >
-                  <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all hover:scale-105 border border-gray-200">
-                    {/* Image */}
-                    <div className="relative h-48 overflow-hidden bg-gray-200">
-                      {badge.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={badge.image_url}
-                          alt={badge.location_name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              "https://via.placeholder.com/300?text=Badge";
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-4xl">
-                          🏆
-                        </div>
-                      )}
+              {profileData.badges.map((badge: any, index) => {
+                console.log("Rendering badge:", profileData);
+                return (
+                  <Link
+                    key={index}
+                    href={`/location/${badge.location_id}`}
+                    className="group"
+                  >
+                    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all hover:scale-105 border border-gray-200 mr-2 mb-2">
+                      {/* Image */}
+                      <div className="relative h-48 overflow-hidden bg-gray-200">
+                        {badge.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={badge.image_url}
+                            alt={badge.location_name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-4xl">
+                            🏆
+                          </div>
+                        )}
 
-                      {/* Rarity Badge */}
-                      <div
-                        className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold ${getRarityColor(
-                          badge.rarity
-                        )} shadow-lg`}
-                      >
-                        {getRarityName(badge.rarity)}
+                        {/* Location ID */}
+                        <div className="absolute top-3 left-3 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-semibold">
+                          Location #{badge.location_id}
+                        </div>
                       </div>
 
-                      {/* Location ID */}
-                      <div className="absolute top-3 left-3 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-semibold">
-                        Location #{badge.location_id}
-                      </div>
-                    </div>
+                      {/* Info */}
+                      <div className="p-4">
+                        <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1">
+                          {badge.location_name}
+                        </h3>
 
-                    {/* Info */}
-                    <div className="p-4">
-                      <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1">
-                        {badge.location_name}
-                      </h3>
+                        {/* Stats */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded p-2 text-center border border-blue-200">
+                            <div className="text-sm font-bold text-blue-600">
+                              {
+                                ["Common", "Rare", "Epic", "Legendary"][
+                                  badge.rarity
+                                ]
+                              }
+                            </div>
+                            <div className="text-xs text-blue-500 font-medium">
+                              Perfection
+                            </div>
+                          </div>
+                          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded p-2 text-center border border-blue-200">
+                            <div className="text-sm font-bold text-blue-600">
+                              {badge.perfection}
+                            </div>
+                            <div className="text-xs text-blue-500 font-medium">
+                              Rarity
+                            </div>
+                          </div>
 
-                      {/* Stats */}
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded p-2 text-center border border-blue-200">
-                          <div className="text-sm font-bold text-blue-600">
-                            {badge.perfection}
-                          </div>
-                          <div className="text-xs text-blue-500 font-medium">
-                            Perfection
-                          </div>
-                        </div>
-                        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded p-2 text-center border border-green-200">
-                          <div className="text-sm font-bold text-green-600">
-                            {((badge.perfection / 1000) * 100).toFixed(0)}%
-                          </div>
-                          <div className="text-xs text-green-500 font-medium">
-                            Score
-                          </div>
-                        </div>
-                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded p-2 text-center border border-purple-200">
-                          <div className="text-sm font-bold text-purple-600">
-                            ⭐
-                          </div>
-                          <div className="text-xs text-purple-500 font-medium">
-                            Badge
+                          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded p-2 text-center border border-purple-200">
+                            <div className="text-sm font-bold text-purple-600">
+                              {formatDate(parseInt(badge.created_at))}
+                            </div>
+                            <div className="text-xs text-purple-500 font-medium">
+                              Create at
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
@@ -1061,21 +1229,21 @@ export default function MyProfilePage() {
         {/* ============ 3.5. KIOSK LISTINGS ============ */}
         {profileData && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <div className="flex lg:flex-row flex-col items-center justify-between">
+              <h2 className="lg:text-3xl text-lg my-3 font-bold text-gray-900 flex items-center gap-2">
                 🛍️ My Kiosk Listings
-                <span className="text-lg bg-green-100 text-green-600 px-3 py-1 rounded-full">
-                  {kioskListings.length}
+                <span className="lg:text-lg bg-green-100 text-green-600 px-3 py-1 rounded-full">
+                  ( {kioskListings.length})
                 </span>
               </h2>
             </div>
 
             {kioskListings.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ">
                 {kioskListings.map((listing) => (
                   <div
                     key={listing.listingId}
-                    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all border-2 border-green-200"
+                    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all border-2 border-green-200 mr-2 mb-2"
                   >
                     {/* Image */}
                     <div className="relative h-48 overflow-hidden bg-gray-200">
@@ -1205,11 +1373,11 @@ export default function MyProfilePage() {
 
         {/* ============ 4. MEMORY NFTs COLLECTION ============ */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+          <div className="flex flex-col lg:flex-row items-center justify-between my-3">
+            <h2 className="lg:text-3xl text-lg font-bold text-gray-900 flex items-center gap-2">
               📸 My Memory NFTs
-              <span className="text-lg bg-purple-100 text-purple-600 px-3 py-1 rounded-full">
-                {memoryNFTs.length}
+              <span className="lg:text-lg bg-purple-100 text-purple-600 px-3 py-1 rounded-full">
+                ({memoryNFTs.length})
               </span>
             </h2>
             <Link
@@ -1225,7 +1393,7 @@ export default function MyProfilePage() {
               {memoryNFTs.map((nft) => (
                 <div
                   key={nft.id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all border border-gray-200"
+                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all border border-gray-200 mr-2 mb-2"
                 >
                   {/* Image */}
                   <div className="relative h-48 overflow-hidden bg-gray-200">
@@ -1242,21 +1410,6 @@ export default function MyProfilePage() {
                         📸
                       </div>
                     )}
-
-                    {/* Rarity Badge */}
-                    <div
-                      className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold text-gray-900 shadow-lg ${
-                        nft.rarity === 0
-                          ? "bg-gray-200"
-                          : nft.rarity === 1
-                          ? "bg-blue-200"
-                          : nft.rarity === 2
-                          ? "bg-purple-200"
-                          : "bg-yellow-200"
-                      }`}
-                    >
-                      {["Common", "Rare", "Epic", "Legendary"][nft.rarity]}
-                    </div>
                   </div>
 
                   {/* Info */}
@@ -1274,20 +1427,28 @@ export default function MyProfilePage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded p-2 text-center border border-pink-200">
-                        <div className="text-sm font-bold text-pink-600">
-                          {nft.perfection}
-                        </div>
-                        <div className="text-xs text-pink-500 font-medium">
-                          Perfection
+                      <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded p-2 text-center ">
+                        <span className="lg:text-xl text-xs">Rarity</span>
+                        <div
+                          className={`rounded-full text-xs font-bold text-gray-900 shadow-lg ${
+                            nft.rarity === 0
+                              ? "bg-gray-200"
+                              : nft.rarity === 1
+                              ? "bg-blue-200"
+                              : nft.rarity === 2
+                              ? "bg-purple-200"
+                              : "bg-yellow-200"
+                          }`}
+                        >
+                          {["Common", "Rare", "Epic", "Legendary"][nft.rarity]}
                         </div>
                       </div>
                       <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded p-2 text-center border border-yellow-200">
                         <div className="text-sm font-bold text-yellow-600">
-                          {((nft.perfection / 1000) * 100).toFixed(0)}%
+                          {nft.perfection}
                         </div>
                         <div className="text-xs text-yellow-500 font-medium">
-                          Quality
+                          Perfection
                         </div>
                       </div>
                     </div>

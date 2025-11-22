@@ -10,6 +10,7 @@ import {
 } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
 import { CONTRACT_CONFIG } from "@/config/contracts";
+import toast from "react-hot-toast";
 
 export default function Create() {
   const dispatch = useDispatch();
@@ -32,7 +33,7 @@ export default function Create() {
     try {
       // 🧩 Kiểm tra quyền vị trí trước
       if (!navigator.geolocation) {
-        alert("⚠️ Trình duyệt không hỗ trợ GPS!");
+        toast.error("⚠️ Your browser does not support GPS!");
         return;
       }
 
@@ -43,11 +44,13 @@ export default function Create() {
           (err) => {
             if (err.code === 1) {
               // USER_DENIED_PERMISSION
-              alert(
-                "⚠️ Bạn đã từ chối quyền truy cập vị trí. Hãy bật lại GPS để mint NFT!"
+              toast.error(
+                "⚠️ You have denied location access. Please enable GPS to mint NFT!"
               );
             } else {
-              alert("⚠️ Không thể lấy vị trí! Hãy kiểm tra cài đặt GPS.");
+              toast.error(
+                "⚠️ Unable to get location! Please check GPS settings."
+              );
             }
             reject(err);
           },
@@ -64,7 +67,7 @@ export default function Create() {
       setImagePreview(URL.createObjectURL(blob));
       setPosition({ latitude, longitude });
     } catch (err) {
-      console.error("❌ Lỗi khi chụp hoặc lấy vị trí:", err);
+      toast.error("❌ Error capturing photo or getting location:", err);
       // Nếu lỗi → reset, không cho mint
       setImageBlob(null);
       setImagePreview("");
@@ -75,17 +78,18 @@ export default function Create() {
   // 🧩 Upload ảnh lên Walrus
   const handleUpload = async () => {
     if (!account) {
+      toast.error("⚠️ Please connect your Sui wallet before uploading!");
       return;
     }
 
     if (!imageBlob) {
-      alert("Vui lòng chụp ảnh trước khi upload!");
+      toast.error("⚠️ Please take a photo before uploading!");
       return;
     }
 
     if (!position.latitude || !position.longitude) {
-      alert(
-        "⚠️ Vui lòng bật GPS và cấp quyền truy cập vị trí trước khi upload!"
+      toast.error(
+        "⚠️ Please enable GPS and grant location access before uploading!"
       );
       return;
     }
@@ -111,15 +115,14 @@ export default function Create() {
         info?.newlyCreated?.blobObject?.blobId || info?.blobObject?.blobId;
 
       if (!newBlobId) {
-        throw new Error("Không tìm thấy blobId trong phản hồi từ Walrus!");
+        throw new Error("BlobId not found in response from Walrus!");
       }
 
       const url_image = `https://aggregator.walrus-testnet.walrus.space/v1/blobs/${newBlobId}`;
       // Mint memory NFT on chain
       await handleMint(url_image);
     } catch (err) {
-      console.error("❌ Upload error:", err);
-      alert(`Upload lỗi: ${err.message}`);
+      toast.error(`Upload error: ${err.message}`);
     } finally {
       setUploading(false);
     }
@@ -207,15 +210,13 @@ export default function Create() {
             setLoading(false);
           },
           onError: (error) => {
-            console.error("Mint failed:", error);
-            alert(`Mint failed: ${error.message}`);
+            toast.error(`Mint failed: ${error.message}`);
             setLoading(false);
           },
         }
       );
     } catch (error) {
-      console.error("Error minting memory:", error);
-      alert(`Error: ${error.message}`);
+      toast.error(`Error: ${error.message}`);
       setLoading(false);
     }
   };
@@ -244,12 +245,17 @@ export default function Create() {
       </picture>
       <div className="container text-center py-12">
         <Meta title="Create NFT with Walrus" />
-        <h1 className="text-jacarta-700 lg:pt-0 pt-10 font-bold font-display mb-6 text-center text-3xl dark:text-white lg:text-4xl">
-          Checkin and mint NFT
-        </h1>
+        {!nftInfo ? (
+          <h1 className="text-jacarta-700 lg:pt-0 pt-10 font-bold font-display mb-6 text-center text-3xl dark: lg:text-4xl">
+            Checkin and mint NFT
+          </h1>
+        ) : (
+          <h1 className="text-jacarta-700 lg:pt-0 pt-10 font-bold font-display mb-6 text-center text-3xl dark: lg:text-4xl">
+            Checkin again to mint more NFT
+          </h1>
+        )}
 
         {!imageBlob && <CameraCapture onCapture={handleCapture} />}
-
         {imageBlob && (
           <div className="flex flex-col items-center gap-4">
             {!nftInfo && (
@@ -260,41 +266,44 @@ export default function Create() {
               />
             )}
 
-            <div className="flex gap-2 items-center">
-              <input
-                type="search"
-                className="text-jacarta-700 placeholder-jacarta-500 focus:ring-accent border-jacarta-100 w-full rounded-2xl border py-[0.6875rem] px-4  dark:border-transparent dark:bg-white/[.15] dark:text-white dark:placeholder-white"
-                placeholder="Tên NFT của bạn"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                maxLength={50}
-              />
-            </div>
+            {!nftInfo && (
+              <div className="flex gap-2 items-center">
+                <input
+                  type="search"
+                  className="text-jacarta-700 placeholder-jacarta-500 focus:ring-accent border-jacarta-100 w-full rounded-2xl border py-[0.6875rem] px-4  dark:border-transparent dark:bg-white/[.15] dark: dark:placeholder-white"
+                  placeholder="Name of your NFT"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  maxLength={50}
+                />
+              </div>
+            )}
 
-            <div className="flex gap-3">
-              <button
-                onClick={handleUpload}
-                disabled={uploading || loading}
-                className="bg-accent shadow-accent-volume hover:bg-accent-dark rounded-full py-2 px-6 text-center font-semibold text-white transition-all disabled:opacity-50"
-              >
-                {uploading
-                  ? "Uploading..."
-                  : loading
-                  ? "Minting..."
-                  : "Upload & Mint"}
-              </button>
+            {!nftInfo && (
+              <div className="flex gap-3">
+                <button
+                  onClick={handleUpload}
+                  disabled={uploading || loading}
+                  className="bg-accent shadow-accent-volume hover:bg-accent-dark rounded-full py-2 px-6 text-center font-semibold  transition-all disabled:opacity-50"
+                >
+                  {uploading
+                    ? "Uploading..."
+                    : loading
+                    ? "Minting..."
+                    : "Upload & Mint"}
+                </button>
 
-              <button
-                onClick={handleRetake}
-                className="text-accent font-display text-sm font-semibold"
-              >
-                🔄 Chụp lại
-              </button>
-            </div>
-
+                <button
+                  onClick={handleRetake}
+                  className="text-accent font-display text-sm font-semibold"
+                >
+                  🔄 Snap again
+                </button>
+              </div>
+            )}
             {uploading && (
               <p className="text-gray-500 animate-pulse mt-2">
-                Đang upload ảnh lên Walrus...
+                Uploading photos to Walrus...
               </p>
             )}
 
@@ -328,7 +337,7 @@ export default function Create() {
                           </p>
                           <div className="flex items-center justify-center gap-2">
                             <span
-                              className={`px-3 py-1 rounded-full text-sm font-bold text-white ${
+                              className={`px-3 text-xl py-1 rounded-full text-sm font-bold  ${
                                 nftInfo.rarity === 0
                                   ? "bg-gray-500"
                                   : nftInfo.rarity === 1
@@ -350,7 +359,7 @@ export default function Create() {
                           <p className="text-xs text-gray-600 font-semibold mb-1">
                             PERFECTION
                           </p>
-                          <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-500">
+                          <div className="text-2xl font-bold  bg-clip-text bg-gradient-to-r from-pink-500 to-rose-500">
                             {nftInfo.perfection}
                           </div>
                           <p className="text-xs text-gray-500">/1000</p>
@@ -403,7 +412,7 @@ export default function Create() {
                       href={`https://suiexplorer.com/txblock/${nftInfo.digest}?network=testnet`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-green-600 underline text-sm"
+                      className="text-green-600 underline text-sm mt-2"
                     >
                       View on Sui Explorer
                     </a>
@@ -413,7 +422,7 @@ export default function Create() {
                       href={`https://suiexplorer.com/object/${nftInfo.id}?network=testnet`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 underline text-sm"
+                      className="text-blue-600 underline text-sm mt-2"
                     >
                       View NFT on Sui Explorer
                     </a>

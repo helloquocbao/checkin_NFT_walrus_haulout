@@ -16,6 +16,15 @@ import {
   getKioskItems,
 } from "@/services/profileService";
 
+import SectionHeader from "./SectionHeader";
+import EmptyState from "./EmptyState";
+import GridLayout from "./GridLayout";
+import CardBadge from "./CardBadge";
+import CardMemoryNFT from "./CardMemoryNFT";
+import CardKiosk from "./CardKiosk";
+import Tippy from "@tippyjs/react";
+import toast from "react-hot-toast";
+
 interface Badge {
   location_id: number;
   location_name: string;
@@ -69,7 +78,7 @@ export default function UserProfilePage() {
   const profileId = params.id as string;
   const currentAccount = useCurrentAccount();
   const { mutate: signAndExecute } = useSignAndExecuteTransaction();
-
+  const [imageModal, setImageModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);
   const [badges, setBadges] = useState<Badge[]>([]);
@@ -80,10 +89,7 @@ export default function UserProfilePage() {
   const [canClaimVerify, setCanClaimVerify] = useState(false);
   const [voting, setVoting] = useState(false);
   const [claimingVerify, setClaimingVerify] = useState(false);
-  const [toastMessage, setToastMessage] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
+
   const [userProfile, setUserProfile] = useState<{
     objectId: string;
     address: string;
@@ -260,26 +266,19 @@ export default function UserProfilePage() {
   // Handle vote for profile
   const handleVoteForProfile = async () => {
     if (!currentAccount?.address) {
-      setToastMessage({
-        type: "error",
-        message: "Please connect your wallet first",
-      });
+      toast.error("Please connect your wallet first");
       return;
     }
 
     if (!userProfile?.address) {
-      setToastMessage({
-        type: "error",
-        message: "Profile owner address not found",
-      });
+      toast.error("Profile owner address not found");
+
       return;
     }
 
     if (currentAccount.address === userProfile.address) {
-      setToastMessage({
-        type: "error",
-        message: "You cannot vote for yourself",
-      });
+      toast.error("You cannot vote for yourself");
+
       return;
     }
 
@@ -294,10 +293,8 @@ export default function UserProfilePage() {
         },
         {
           onSuccess: () => {
-            setToastMessage({
-              type: "success",
-              message: "Vote successful! ✓",
-            });
+            toast.success("Vote successful! ✓");
+
             setHasVoted(true);
             // Reload profile to update vote count
             setTimeout(() => {
@@ -306,19 +303,13 @@ export default function UserProfilePage() {
           },
           onError: (error) => {
             console.error("Vote failed:", error);
-            setToastMessage({
-              type: "error",
-              message: `Vote failed: ${error.message}`,
-            });
+            toast.error("Vote failed");
           },
         }
       );
     } catch (error) {
       console.error("Error voting:", error);
-      setToastMessage({
-        type: "error",
-        message: error instanceof Error ? error.message : "Vote failed",
-      });
+      toast.error("Vote failed");
     } finally {
       setVoting(false);
     }
@@ -327,18 +318,13 @@ export default function UserProfilePage() {
   // Handle claim verification
   const handleClaimVerification = async () => {
     if (!currentAccount?.address) {
-      setToastMessage({
-        type: "error",
-        message: "Please connect your wallet first",
-      });
+      toast.error("Please connect your wallet first");
+
       return;
     }
 
     if (!userProfile?.objectId) {
-      setToastMessage({
-        type: "error",
-        message: "Profile not found",
-      });
+      toast.error("Profile not found");
       return;
     }
 
@@ -352,45 +338,27 @@ export default function UserProfilePage() {
         },
         {
           onSuccess: () => {
-            setToastMessage({
-              type: "success",
-              message: "Verification claimed! ✓",
-            });
+            toast.success("Transaction submitted! Awaiting confirmation...");
+
             // Reload profile to update verified status
             setTimeout(() => {
               window.location.reload();
             }, 2000);
           },
           onError: (error) => {
-            console.error("Claim verification failed:", error);
-            setToastMessage({
-              type: "error",
-              message: `Claim failed: ${error.message}`,
-            });
+            toast.error("Claim verification failed");
           },
         }
       );
     } catch (error) {
       console.error("Error claiming verification:", error);
-      setToastMessage({
-        type: "error",
-        message:
-          error instanceof Error ? error.message : "Claim verification failed",
-      });
+      toast.error(
+        error instanceof Error ? error.message : "Claim verification failed"
+      );
     } finally {
       setClaimingVerify(false);
     }
   };
-
-  // Hide toast message after 5 seconds
-  useEffect(() => {
-    if (toastMessage) {
-      const timer = setTimeout(() => {
-        setToastMessage(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [toastMessage]);
 
   // Loading state
   if (loading) {
@@ -423,509 +391,385 @@ export default function UserProfilePage() {
     );
   }
 
+  console.log("Profile Info:", profileInfo);
+
   return (
-    <div className="min-h-screen bg-white pt-20 py-12">
-      <div className="max-w-5xl mx-auto px-4">
-        {/* Profile Info Section - Top */}
-        <div className="mb-12">
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            {/* Cover Background */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-40 sm:h-48"></div>
+    <section className="relative pb-10 pt-20 md:pt-32 h-1527">
+      <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 block dark:hidden h-full">
+        <img
+          src="/images/gradient.jpg"
+          alt="gradient"
+          className="h-full w-full"
+        />
+      </picture>
+      <picture className="pointer-events-none absolute inset-x-0 top-0 -z-10 hidden dark:block">
+        <img
+          src="/images/gradient_dark.jpg"
+          alt="gradient dark"
+          className="h-full w-full"
+        />
+      </picture>
+      <div className="container mx-auto min-h-screen bg-gray-50 pt-24 pb-16">
+        <div className="md:flex md:flex-wrap">
+          <figure className="mb-8 md:w-2/5 md:flex-shrink-0 md:flex-grow-0 md:basis-auto lg:w-1/2 w-full">
+            <button className=" w-full" onClick={() => setImageModal(true)}>
+              <img
+                src={profileInfo?.avatar_url}
+                alt={"title"}
+                className="rounded-2xl cursor-pointer  w-full"
+              />
+            </button>
 
-            {/* Profile Content */}
-            <div className="px-4 sm:px-8 pb-8">
-              <div className="flex flex-col sm:flex-row gap-6 -mt-20 sm:-mt-24">
-                {/* Avatar */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* <!-- Modal --> */}
+            <div
+              className={imageModal ? "modal fade show block" : "modal fade"}
+            >
+              <div className="modal-dialog !my-0 flex h-full max-w-4xl items-center justify-center">
                 <img
-                  src={
-                    profileInfo.avatar_url || "https://via.placeholder.com/150"
-                  }
-                  alt={profileInfo.name}
-                  className="w-32 h-32 sm:w-40 sm:h-40 rounded-full mx-auto sm:mx-0 border-4 border-white shadow-lg object-cover flex-shrink-0"
+                  src={profileInfo?.avatar_url}
+                  alt={"ád"}
+                  className="h-full rounded-2xl"
                 />
-
-                {/* Profile Info */}
-                <div className="flex-1 text-center sm:text-left pt-4 sm:pt-8">
-                  {/* Name */}
-                  <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-                    {profileInfo.name}
-                  </h1>
-
-                  {/* Verification Badge */}
-                  <div className="flex items-center justify-center sm:justify-start gap-2 mb-3">
-                    {profileInfo.is_verified && (
-                      <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
-                        ✓ Verified
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Verification Status Section */}
-                  {!profileInfo.is_verified && (
-                    <div className="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-200">
-                      <div className="flex items-start gap-3">
-                        <div className="text-xl mt-1">🔐</div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-gray-900 mb-2">
-                            Verification Status
-                          </p>
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-                              <div
-                                className="bg-blue-500 h-full transition-all"
-                                style={{
-                                  width: `${Math.min(
-                                    (profileInfo.verify_votes /
-                                      verifyThreshold) *
-                                      100,
-                                    100
-                                  )}%`,
-                                }}
-                              ></div>
-                            </div>
-                            <span className="text-sm font-semibold text-gray-700 min-w-fit">
-                              {profileInfo.verify_votes}/{verifyThreshold}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-600 mb-3">
-                            {profileInfo.verify_votes < verifyThreshold
-                              ? `${
-                                  verifyThreshold - profileInfo.verify_votes
-                                } more vote${
-                                  verifyThreshold - profileInfo.verify_votes !==
-                                  1
-                                    ? "s"
-                                    : ""
-                                } needed for verification`
-                              : "You can now claim your verification badge!"}
-                          </p>
-                          {canClaimVerify && (
-                            <button
-                              onClick={handleClaimVerification}
-                              disabled={claimingVerify}
-                              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors w-full disabled:bg-gray-400 disabled:cursor-not-allowed"
-                            >
-                              {claimingVerify
-                                ? "Processing..."
-                                : "Claim Verification"}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Bio */}
-                  <p className="text-gray-600 text-lg mb-4">
-                    {profileInfo.bio}
-                  </p>
-
-                  {/* Country & Stats */}
-                  <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-                    {/* Country */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">🌍</span>
-                      <div>
-                        <div className="text-sm text-gray-600">Country</div>
-                        <div className="font-semibold text-gray-900">
-                          {profileInfo.country}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="flex gap-8">
-                      <div className="text-center">
-                        <div className="text-2xl sm:text-3xl font-bold text-blue-600">
-                          {profileInfo.badge_count}
-                        </div>
-                        <div className="text-xs sm:text-sm text-gray-600">
-                          Unique Badges
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl sm:text-3xl font-bold text-purple-600">
-                          {profileInfo.total_claims}
-                        </div>
-                        <div className="text-xs sm:text-sm text-gray-600">
-                          Total Claims
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Join Date */}
-                  <div className="mt-6 text-sm text-gray-500">
-                    📅 Joined {formatDate(profileInfo.created_at)}
-                  </div>
-                </div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Badge List Section - Bottom */}
-        <div className="mb-12">
-          <div className="mb-8">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-              🏅 Claimed Badges ({badges.length})
-            </h2>
-            <p className="text-gray-600">
-              {badges.length} badge{badges.length !== 1 ? "s" : ""} claimed
-            </p>
-          </div>
-
-          {badges.length === 0 ? (
-            <div className="bg-gray-50 rounded-lg p-12 text-center border-2 border-dashed border-gray-300">
-              <div className="text-4xl mb-4">🎖️</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No Badges Yet
-              </h3>
-              <p className="text-gray-600 mb-6">
-                This user hasn&apos;t claimed any badges yet. Start exploring
-                locations to earn badges!
-              </p>
-              <Link
-                href="/claim-badge"
-                className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-              >
-                Claim Your First Badge
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {badges.map((badge) => (
-                <div
-                  key={badge.location_id}
-                  className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow border-l-4 border-blue-500"
-                >
-                  {/* Badge Image */}
-                  <div className="relative h-40 sm:h-48 bg-gray-200 overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={badge.image_url || "https://via.placeholder.com/300"}
-                      alt={badge.location_name}
-                      className="w-full h-full object-cover"
-                    />
-
-                    {/* Rarity Badge */}
-                    <div
-                      className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold ${getRarityColor(
-                        badge.rarity
-                      )}`}
-                    >
-                      {getRarityName(badge.rarity)}
-                    </div>
-                  </div>
-
-                  {/* Badge Info */}
-                  <div className="p-4">
-                    <Link
-                      href={`/location/${badge.location_id}`}
-                      className="text-lg font-bold text-gray-900 hover:text-blue-600 transition-colors"
-                    >
-                      {badge.location_name}
-                    </Link>
-
-                    <div className="mt-3 space-y-2 text-sm text-gray-600">
-                      <div>
-                        <span className="font-semibold">Perfection:</span>{" "}
-                        <span className="text-blue-600">
-                          {badge.perfection}/1000 (
-                          {((badge.perfection / 1000) * 100).toFixed(1)}%)
-                        </span>
-                      </div>
-                      <div>
-                        <span className="font-semibold">📅 Claimed:</span>{" "}
-                        {formatDate(badge.created_at)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Memory NFTs Section */}
-        <div className="mb-12">
-          <div className="mb-8">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-              📸 Memory NFTs ({memoryNFTs.length})
-            </h2>
-            <p className="text-gray-600">
-              {memoryNFTs.length} memory NFT{memoryNFTs.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-
-          {memoryNFTs.length === 0 ? (
-            <div className="bg-gray-50 rounded-lg p-12 text-center border-2 border-dashed border-gray-300">
-              <div className="text-4xl mb-4">📸</div>
-              <p className="text-gray-600">No memory NFTs yet</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {memoryNFTs.map((nft) => (
-                <div
-                  key={nft.id}
-                  className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow border-l-4 border-purple-500"
-                >
-                  {/* Image */}
-                  <div className="relative h-40 sm:h-48 bg-gray-200 overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={nft.image_url || "https://via.placeholder.com/300"}
-                      alt={nft.name}
-                      className="w-full h-full object-cover"
-                    />
-
-                    {/* Rarity Badge */}
-                    <div
-                      className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold ${getRarityColor(
-                        nft.rarity
-                      )}`}
-                    >
-                      {getRarityName(nft.rarity)}
-                    </div>
-                  </div>
-
-                  {/* NFT Info */}
-                  <div className="p-4">
-                    <h3 className="text-lg font-bold text-gray-900">
-                      {nft.name}
-                    </h3>
-
-                    <p className="text-xs text-gray-600 mt-2 line-clamp-2">
-                      {nft.content}
-                    </p>
-
-                    <div className="mt-3 text-xs text-gray-500">
-                      📍 {nft.latitude}, {nft.longitude}
-                    </div>
-
-                    <div className="mt-3 space-y-1 text-sm text-gray-600">
-                      <div>
-                        <span className="font-semibold">Perfection:</span>{" "}
-                        <span className="text-purple-600">
-                          {nft.perfection}
-                        </span>
-                      </div>
-                    </div>
-
-                    <a
-                      href={`https://suiexplorer.com/object/${nft.id}?network=testnet`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block w-full mt-3 text-center py-2 bg-purple-100 text-purple-600 rounded-lg text-xs font-semibold hover:bg-purple-200 transition-colors"
-                    >
-                      View on Explorer →
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Kiosk Listings Section */}
-        <div className="mb-12">
-          <div className="mb-8">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-              🛍️ Listed on Kiosk ({kioskListings.length})
-            </h2>
-            <p className="text-gray-600">
-              {kioskListings.length} NFT{kioskListings.length !== 1 ? "s" : ""}{" "}
-              for sale
-            </p>
-          </div>
-
-          {kioskListings.length === 0 ? (
-            <div className="bg-gray-50 rounded-lg p-12 text-center border-2 border-dashed border-gray-300">
-              <div className="text-4xl mb-4">🛍️</div>
-              <p className="text-gray-600">No NFTs listed on kiosk</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {kioskListings.map((listing) => (
-                <div
-                  key={listing.listingId}
-                  className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow border-l-4 border-green-500"
-                >
-                  {/* Image */}
-                  <div className="relative h-40 sm:h-48 bg-gray-200 overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={
-                        listing.imageUrl || "https://via.placeholder.com/300"
-                      }
-                      alt={listing.name}
-                      className="w-full h-full object-cover"
-                    />
-
-                    {/* Status Badge */}
-                    <div className="absolute top-3 left-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold">
-                      ✓ Listed
-                    </div>
-
-                    {/* Rarity Badge */}
-                    <div
-                      className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold ${getRarityColor(
-                        listing.rarity
-                      )}`}
-                    >
-                      {getRarityName(listing.rarity)}
-                    </div>
-                  </div>
-
-                  {/* Listing Info */}
-                  <div className="p-4">
-                    <h3 className="text-lg font-bold text-gray-900">
-                      {listing.name}
-                    </h3>
-
-                    <p className="text-xs text-gray-600 mt-2 line-clamp-2">
-                      {listing.content}
-                    </p>
-
-                    <div className="mt-3 text-xs text-gray-500">
-                      📍 {listing.latitude}, {listing.longitude}
-                    </div>
-
-                    {/* Price Display */}
-                    <div className="mt-3 bg-green-50 border border-green-200 rounded p-2">
-                      <div className="text-xs text-gray-600">Listed Price:</div>
-                      <div className="text-lg font-bold text-green-600">
-                        {(BigInt(listing.price) / BigInt(1e9)).toString()} SUI
-                      </div>
-                    </div>
-
-                    <div className="mt-3 space-y-1 text-sm text-gray-600">
-                      <div>
-                        <span className="font-semibold">Perfection:</span>{" "}
-                        <span className="text-green-600">
-                          {listing.perfection}
-                        </span>
-                      </div>
-                    </div>
-
-                    <a
-                      href={`https://suiexplorer.com/object/${listing.listingId}?network=testnet`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block w-full mt-3 text-center py-2 bg-green-100 text-green-600 rounded-lg text-xs font-semibold hover:bg-green-200 transition-colors"
-                    >
-                      View Listing →
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Back Button */}
-        <div className="text-center pt-8 border-t border-gray-200">
-          <Link
-            href="/claim-badge"
-            className="text-blue-600 hover:text-blue-700 font-semibold"
-          >
-            ← Back to Claim Badges
-          </Link>
-        </div>
-
-        {/* Verification Voting Section */}
-        <div className="mt-12 mb-12">
-          <div className="mb-8">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-              🗳️ Help Verify This User
-            </h2>
-            <p className="text-gray-600">
-              Verified users have been trusted by the community
-            </p>
-          </div>
-
-          {profileInfo?.is_verified ? (
-            <div className="bg-green-50 rounded-lg p-8 border border-green-200 text-center">
-              <div className="text-4xl mb-3">✓</div>
-              <p className="text-lg font-semibold text-green-700">
-                This user is already verified!
-              </p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg shadow-lg p-8">
-              <div className="mb-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-3">
-                  How Verification Works
-                </h3>
-                <ul className="space-y-2 text-gray-600">
-                  <li className="flex items-start gap-3">
-                    <span className="text-blue-600 font-bold mt-1">1</span>
-                    <span>Review this user&apos;s profile and badges</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-blue-600 font-bold mt-1">2</span>
-                    <span>Click the vote button if you trust them</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-blue-600 font-bold mt-1">3</span>
-                    <span>
-                      When they reach {verifyThreshold} votes, they can claim
-                      their verification badge
-                    </span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                <div className="text-center">
-                  <p className="text-gray-600 mb-2">
-                    Current Verification Votes
-                  </p>
-                  <div className="text-4xl font-bold text-blue-600">
-                    {profileInfo?.verify_votes || 0}/{verifyThreshold}
-                  </div>
-                </div>
-              </div>
-
-              {!currentAccount?.address && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                  <p className="text-yellow-800 text-sm">
-                    💼 Connect your wallet to vote
-                  </p>
-                </div>
-              )}
 
               <button
-                onClick={handleVoteForProfile}
-                disabled={voting || hasVoted}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                type="button"
+                className="btn-close absolute top-6 right-6"
+                onClick={() => setImageModal(false)}
               >
-                {voting
-                  ? "Processing..."
-                  : hasVoted
-                  ? "✓ Voted"
-                  : "👍 Vote for This User"}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  height="24"
+                  className="h-6 w-6 fill-white"
+                >
+                  <path fill="none" d="M0 0h24v24H0z" />
+                  <path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" />
+                </svg>
               </button>
-
-              <p className="text-xs text-gray-500 text-center mt-4">
-                You can vote for up to 2 different users
-              </p>
             </div>
-          )}
-        </div>
+            {/* <!-- end modal --> */}
+          </figure>
+          <div className="md:w-3/5 md:basis-auto md:pl-8 lg:w-1/2 lg:pl-[3.75rem]">
+            {/* <!-- Collection / Likes / Actions --> */}
+            <div className="mb-3 flex">
+              {/* <!-- Collection --> */}
+              <div className="flex items-center">
+                <a className="text-accent mr-2 text-sm font-bold">
+                  NFT Profile
+                </a>
+              </div>
+            </div>
 
-        {/* Toast Notification */}
-        {toastMessage && (
-          <div
-            className={`fixed bottom-4 right-4 p-4 rounded-lg text-white shadow-lg animate-fade-in ${
-              toastMessage.type === "success" ? "bg-green-500" : "bg-red-500"
-            }`}
-          >
-            {toastMessage.message}
+            <h1 className="font-display text-jacarta-700 mb-4 text-4xl font-semibold dark:text-white">
+              {profileInfo?.name}
+            </h1>
+
+            <div className="mb-8 flex items-center space-x-4 whitespace-nowrap">
+              <div className="flex items-center">
+                <Tippy content={<span>SUI</span>}>
+                  <span className="mr-1">
+                    <svg
+                      className=" w-4 h-4 "
+                      viewBox="0 0 300 384"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        clip-rule="evenodd"
+                        d="M240.057 159.914C255.698 179.553 265.052 204.39 265.052 231.407C265.052 258.424 255.414 284.019 239.362 303.768L237.971 305.475L237.608 303.31C237.292 301.477 236.929 299.613 236.502 297.749C228.46 262.421 202.265 232.134 159.148 207.597C130.029 191.071 113.361 171.195 108.985 148.586C106.157 133.972 108.258 119.294 112.318 106.717C116.379 94.1569 122.414 83.6187 127.549 77.2831L144.328 56.7754C147.267 53.1731 152.781 53.1731 155.719 56.7754L240.073 159.914H240.057ZM266.584 139.422L154.155 1.96703C152.007 -0.655678 147.993 -0.655678 145.845 1.96703L33.4316 139.422L33.0683 139.881C12.3868 165.555 0 198.181 0 233.698C0 316.408 67.1635 383.461 150 383.461C232.837 383.461 300 316.408 300 233.698C300 198.181 287.613 165.555 266.932 139.896L266.568 139.438L266.584 139.422ZM60.3381 159.472L70.3866 147.164L70.6868 149.439C70.9237 151.24 71.2239 153.041 71.5715 154.858C78.0809 189.001 101.322 217.456 140.173 239.496C173.952 258.724 193.622 280.828 199.278 305.064C201.648 315.176 202.059 325.129 201.032 333.835L200.969 334.372L200.479 334.609C185.233 342.05 168.09 346.237 149.984 346.237C86.4546 346.237 34.9484 294.826 34.9484 231.391C34.9484 204.153 44.4439 179.142 60.3065 159.44L60.3381 159.472Z"
+                        fill="#4DA2FF"
+                      />
+                    </svg>
+                  </span>
+                </Tippy>
+                <span className="text-green text-sm font-medium tracking-tight">
+                  SUI Chain NFT
+                </span>
+              </div>
+              <span className="dark:text-jacarta-300 text-jacarta-400 text-sm">
+                Create: {formatDate(profileInfo?.created_at)}
+              </span>
+              <span className="dark:text-jacarta-300 text-jacarta-400 text-sm">
+                Country:{" "}
+                {profileInfo?.country !== "" ? profileInfo?.country : "N/A"}
+              </span>
+            </div>
+
+            <p className="dark:text-jacarta-300 mb-10 line-clamp-3">
+              {profileInfo?.bio}
+            </p>
+
+            {/* <!-- Creator / Owner --> */}
+            <div className="mb-8 flex flex-wrap">
+              <div className="mr-8 mb-4 flex">
+                <figure className="mr-4 shrink-0">
+                  <a className="relative block">
+                    <img
+                      src={""}
+                      alt={""}
+                      className="rounded-2lg h-12 w-12"
+                      loading="lazy"
+                    />
+                    <div
+                      className="dark:border-jacarta-600 bg-green absolute -right-3 top-[60%] flex h-6 w-6 items-center justify-center rounded-full border-2 border-white"
+                      data-tippy-content="Verified Collection"
+                    >
+                      <Tippy content={<span>Verified Collection</span>}>
+                        <svg className="icon h-[.875rem] w-[.875rem] fill-white">
+                          <use xlinkHref="/icons.svg#icon-right-sign"></use>
+                        </svg>
+                      </Tippy>
+                    </div>
+                  </a>
+                </figure>
+                <div className="flex flex-col justify-center">
+                  <span className="text-jacarta-400 block text-sm dark:text-white">
+                    Total <strong> claim Badge</strong>
+                  </span>
+
+                  <a className="text-accent block">
+                    <span className="text-sm font-bold">
+                      {profileInfo?.badge_count} badge
+                    </span>
+                  </a>
+                </div>
+              </div>
+
+              <div className="mb-4 flex">
+                <figure className="mr-4 shrink-0">
+                  <a className="relative block">
+                    <img
+                      src={""}
+                      alt={""}
+                      className="rounded-2lg h-12 w-12"
+                      loading="lazy"
+                    />
+                    <div
+                      className="dark:border-jacarta-600 bg-green absolute -right-3 top-[60%] flex h-6 w-6 items-center justify-center rounded-full border-2 border-white"
+                      data-tippy-content="Verified Collection"
+                    >
+                      <Tippy content={<span>Verified Collection</span>}>
+                        <svg className="icon h-[.875rem] w-[.875rem] fill-white">
+                          <use xlinkHref="/icons.svg#icon-right-sign"></use>
+                        </svg>
+                      </Tippy>
+                    </div>
+                  </a>
+                </figure>
+                <div className="flex flex-col justify-center">
+                  <span className="text-jacarta-400 block text-sm dark:text-white">
+                    Checkin
+                  </span>
+
+                  <a className="text-accent block">
+                    <span className="text-sm font-bold">
+                      {profileInfo?.badge_count} Location
+                    </span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* <!-- Bid --> */}
+            <div className="dark:bg-jacarta-700 dark:border-jacarta-600 border-jacarta-100 rounded-2lg border bg-white p-8">
+              <div className="mb-8 sm:flex sm:flex-wrap">
+                {/* <!-- Highest bid --> */}
+                <div className="w-full">
+                  <div className="block overflow-hidden text-ellipsis whitespace-nowrap">
+                    <a
+                      href={`https://suiscan.xyz/testnet/object/${params?.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <span className="dark:text-jacarta-300 text-jacarta-400 text-sm">
+                        NFT onchain:{" "}
+                      </span>
+                      <span className="text-accent text-sm font-bold">
+                        {params?.id}
+                      </span>
+                    </a>
+                  </div>
+                  <div className="mt-3 ">
+                    <p className="text-gray-600 text-center mb-4">
+                      <span className="text-blue-600 font-bold">
+                        {profileInfo.verify_votes > verifyThreshold ? (
+                          <span>
+                            Verified status:{" "}
+                            <span
+                              className="dark:border-jacarta-600 bg-green inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-white"
+                              data-tippy-content="Verified Collection"
+                            >
+                              <Tippy content={<span>Verified Collection</span>}>
+                                <svg className="icon h-[.875rem] w-[.875rem] fill-white">
+                                  <use xlinkHref="/icons.svg#icon-right-sign"></use>
+                                </svg>
+                              </Tippy>
+                            </span>
+                          </span>
+                        ) : (
+                          <>
+                            Current votes: {profileInfo.verify_votes}/
+                            {verifyThreshold}
+                          </>
+                        )}
+                      </span>
+                    </p>
+
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                      You can vote for up to 2 users.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => handleVoteForProfile()}
+                className="bg-accent shadow-accent-volume hover:bg-accent-dark inline-block w-full rounded-full py-3 px-8 text-center font-semibold text-white transition-all"
+              >
+                {currentAccount?.address
+                  ? "👍 Vote for this user"
+                  : "Connect wallet to Vote for this user"}
+              </button>
+            </div>
+            {/* <!-- end bid --> */}
           </div>
-        )}
+        </div>
+        <div className="max-w-6xl mx-auto px-4">
+          {/* ===================== BADGES ===================== */}
+          <section className="mb-16">
+            <SectionHeader
+              title="🏅 Claimed Badges"
+              subtitle={`${badges.length} badge${
+                badges.length !== 1 ? "s" : ""
+              } earned`}
+            />
+
+            {badges.length === 0 ? (
+              <EmptyState
+                icon="🎖️"
+                title="No badges yet"
+                message="Badges you claim will appear here."
+                actionLabel="Claim Your First Badge"
+                actionHref="/claim-badge"
+              />
+            ) : (
+              <GridLayout>
+                {badges.map((b) => (
+                  <CardBadge
+                    key={b.location_id}
+                    badge={b}
+                    getRarityColor={getRarityColor}
+                    getRarityName={getRarityName}
+                  />
+                ))}
+              </GridLayout>
+            )}
+          </section>
+
+          {/* ===================== MEMORY NFTs ===================== */}
+          <section className="mb-16">
+            <SectionHeader
+              title="📸 Memory NFTs"
+              subtitle={`${memoryNFTs.length} memories recorded`}
+            />
+
+            {memoryNFTs.length === 0 ? (
+              <EmptyState icon="📸" title="No memories yet" />
+            ) : (
+              <GridLayout>
+                {memoryNFTs.map((nft) => (
+                  <CardMemoryNFT
+                    key={nft.id}
+                    nft={nft}
+                    getRarityColor={getRarityColor}
+                    getRarityName={getRarityName}
+                  />
+                ))}
+              </GridLayout>
+            )}
+          </section>
+
+          {/* ===================== KIOSK LISTING ===================== */}
+          <section className="mb-16">
+            <SectionHeader
+              title="🛍️ Kiosk Listings"
+              subtitle={`${kioskListings.length} NFT listed for sale`}
+            />
+
+            {kioskListings.length === 0 ? (
+              <EmptyState icon="🛍️" title="No items on sale" />
+            ) : (
+              <GridLayout>
+                {kioskListings.map((item) => (
+                  <CardKiosk
+                    key={item.listingId}
+                    listing={item}
+                    getRarityColor={getRarityColor}
+                    getRarityName={getRarityName}
+                  />
+                ))}
+              </GridLayout>
+            )}
+          </section>
+
+          {/* ===================== VOTING ===================== */}
+          <section className="mb-20">
+            <SectionHeader
+              title="🗳️ Help Verify This User"
+              subtitle="Vote to increase trust and transparency"
+            />
+
+            {profileInfo.is_verified ? (
+              <div className="p-6 bg-green-50 border border-green-200 rounded-xl text-center">
+                <div className="text-5xl">✓</div>
+                <p className="mt-2 text-green-700 font-semibold">
+                  This user is already verified.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white shadow-md p-8 rounded-xl">
+                <p className="text-gray-600 text-center mb-4">
+                  Current votes:{" "}
+                  <span className="text-blue-600 font-bold">
+                    {profileInfo.verify_votes}/{verifyThreshold}
+                  </span>
+                </p>
+
+                {profileInfo.verify_votes === verifyThreshold ? (
+                  <>
+                    <button
+                      onClick={handleClaimVerification}
+                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold disabled:bg-gray-400"
+                    >
+                      {claimingVerify
+                        ? "Processing..."
+                        : "✅ Claim Verification"}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleVoteForProfile}
+                    disabled={voting || hasVoted}
+                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold disabled:bg-gray-400"
+                  >
+                    {voting
+                      ? "Processing..."
+                      : hasVoted
+                      ? "✓ Voted"
+                      : "👍 Vote for this user"}
+                  </button>
+                )}
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  You can vote for up to 2 users.
+                </p>
+              </div>
+            )}
+          </section>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

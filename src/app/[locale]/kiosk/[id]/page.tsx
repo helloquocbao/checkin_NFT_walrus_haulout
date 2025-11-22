@@ -11,7 +11,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { CONTRACT_CONFIG } from "@/config/index";
 import { getUserKiosks } from "@/services/profileService";
-
+function shortenAddress(address, chars = 4) {
+  if (!address) return "";
+  return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`;
+}
 interface KioskListing {
   listingId: string;
   memoryId: string;
@@ -238,7 +241,7 @@ export default function PurchasePage() {
                 {error || "Listing not found"}
               </p>
               <Link
-                href="/user-profile"
+                href="/my-profile"
                 className="mt-4 inline-block bg-accent text-white px-6 py-2 rounded-full"
               >
                 Back to profile
@@ -302,7 +305,7 @@ export default function PurchasePage() {
                 {listing.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={`https://aggregator.walrus-testnet.walrus.space/v1/blobs/${listing.imageUrl}`}
+                    src={`${listing.imageUrl}`}
                     alt={listing.name}
                     className="w-full h-full object-cover"
                   />
@@ -420,16 +423,13 @@ export default function PurchasePage() {
                   Total Price
                 </p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-accent">
+                  <span className="text-xl font-bold text-accent mr-1">
                     {priceInSUI}
                   </span>
                   <span className="text-xl font-semibold dark:text-white">
                     SUI
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-jacarta-400 mt-2">
-                  ≈ {(priceInSUI * 2).toFixed(2)} USD (approx)
-                </p>
               </div>
 
               {/* Seller Info */}
@@ -438,7 +438,7 @@ export default function PurchasePage() {
                   Seller
                 </p>
                 <p className="font-mono text-sm break-all dark:text-white">
-                  {seller}
+                  {shortenAddress(seller)}
                 </p>
               </div>
 

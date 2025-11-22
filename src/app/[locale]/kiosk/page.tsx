@@ -116,6 +116,7 @@ export default function KioskMarketplace() {
 
   // 🔍 Filter listings
   const filteredListings = listings.filter((listing) => {
+    console.log("Filtering listing:", listing);
     if (filter === "all") return true;
     return listing.rarity.toLowerCase() === filter.toLowerCase();
   });
@@ -161,9 +162,7 @@ export default function KioskMarketplace() {
       <div className="container mx-auto">
         {/* Header */}
         <div className="mb-12">
-          <h1 className="text-4xl font-bold mb-4 dark:text-white">
-            🏪 NFT Marketplace
-          </h1>
+          <h1 className="text-4xl font-bold mb-4 dark:">🏪 NFT Marketplace</h1>
           <p className="text-gray-600 dark:text-jacarta-300">
             Discover and buy unique Memory NFTs from the community
           </p>
@@ -175,8 +174,8 @@ export default function KioskMarketplace() {
             onClick={() => setFilter("all")}
             className={`px-4 py-2 rounded-full font-semibold transition-all ${
               filter === "all"
-                ? "bg-accent text-white"
-                : "bg-gray-200 dark:bg-jacarta-600 text-gray-700 dark:text-white hover:bg-accent hover:text-white"
+                ? "bg-accent "
+                : "bg-gray-200 dark:bg-jacarta-600 text-gray-700 dark: hover:bg-accent hover:"
             }`}
           >
             All Listings ({listings.length})
@@ -192,10 +191,8 @@ export default function KioskMarketplace() {
                 onClick={() => setFilter(rarity)}
                 className={`px-4 py-2 rounded-full font-semibold transition-all capitalize ${
                   filter === rarity
-                    ? "bg-accent text-white"
-                    : `${getRarityColor(
-                        rarity
-                      )} text-white opacity-75 hover:opacity-100`
+                    ? "bg-accent "
+                    : `${getRarityColor(rarity)}  opacity-75 hover:opacity-100`
                 }`}
               >
                 {rarity} ({count})
@@ -209,9 +206,7 @@ export default function KioskMarketplace() {
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
-              <p className="mt-4 text-lg dark:text-white">
-                Loading marketplace...
-              </p>
+              <p className="mt-4 text-lg dark:">Loading marketplace...</p>
             </div>
           </div>
         )}
@@ -259,7 +254,7 @@ export default function KioskMarketplace() {
                     {listing.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={`https://aggregator.walrus-testnet.walrus.space/v1/blobs/${listing.imageUrl}`}
+                        src={`${listing.imageUrl}`}
                         alt={listing.name}
                         className="w-full h-full object-cover hover:scale-110 transition-transform"
                       />
@@ -282,7 +277,7 @@ export default function KioskMarketplace() {
                     )}
 
                     {/* Status Badge */}
-                    <div className="absolute top-3 left-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                    <div className="absolute top-3 left-3 bg-green-500  px-3 py-1 rounded-full text-xs font-semibold">
                       ✓ Listed
                     </div>
 
@@ -291,7 +286,7 @@ export default function KioskMarketplace() {
                       <span
                         className={`${getRarityColor(
                           listing.rarity
-                        )} text-white px-3 py-1 rounded-full text-xs font-semibold`}
+                        )}  px-3 py-1 rounded-full text-xs font-semibold`}
                       >
                         {String(listing.rarity).charAt(0).toUpperCase() +
                           String(listing.rarity).slice(1)}
@@ -301,7 +296,7 @@ export default function KioskMarketplace() {
 
                   {/* Content */}
                   <div className="p-4">
-                    <h3 className="text-lg font-semibold mb-2 line-clamp-2 dark:text-white">
+                    <h3 className="text-lg font-semibold mb-2 line-clamp-2 dark:">
                       {listing.name}
                     </h3>
 
@@ -316,7 +311,7 @@ export default function KioskMarketplace() {
                         <span className="text-gray-600 dark:text-jacarta-300">
                           Perfection:
                         </span>
-                        <span className="font-semibold dark:text-white">
+                        <span className="font-semibold dark:">
                           {listing.perfection}%
                         </span>
                       </div>
@@ -338,7 +333,7 @@ export default function KioskMarketplace() {
                     </div>
 
                     {/* Buy Button */}
-                    <button className="w-full bg-accent hover:bg-accent-dark text-white font-semibold py-2 px-4 rounded-lg transition-all hover:shadow-lg">
+                    <button className="w-full bg-accent hover:bg-accent-dark  font-semibold py-2 px-4 rounded-lg transition-all hover:shadow-lg">
                       Buy Now →
                     </button>
                   </div>

@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import { useSuiClient, useCurrentAccount } from "@mysten/dapp-kit";
 import React, { useEffect, useState } from "react";
 
+import { getUserMemoryNFTs } from "@/services/profileService";
 const NFTMapLocate = dynamic(() => import("./components/NFTMapLocate"), {
   ssr: false,
 });
@@ -17,32 +18,36 @@ export default function Collection_items() {
   const account = useCurrentAccount();
   const [nfts, setNfts] = useState([]);
   const [viewMode, setViewMode] = useState("list"); // 'list' | 'map'
-
+  const getRarityName = (rarity) => {
+    switch (rarity) {
+      case 0:
+        return "Common";
+      case 1:
+        return "Rare";
+      case 2:
+        return "Epic";
+      case 3:
+        return "Legendary";
+      default:
+        return "Unknown";
+    }
+  };
   useEffect(() => {
     if (!account?.address) return;
 
-    const packageId =
-      "0xcc84871dc79970f2dab50400699552c2ebeba058c8e6a8a4e9f5ace44464311f";
-    const moduleName = "checkin_nft";
-
-    (async () => {
-      const res = await client.getOwnedObjects({
-        owner: account.address,
-        options: { showType: true, showContent: true },
-      });
-
-      const userNFTs = res.data.filter((obj) =>
-        obj.data?.content?.type?.includes(
-          `${packageId}::${moduleName}::CheckinNFT`
-        )
-      );
-
-      setNfts(userNFTs);
-    })();
+    fetchNFTs();
   }, [account, client]);
 
+  const fetchNFTs = async () => {
+    if (!account?.address) return;
+
+    const nfts = await getUserMemoryNFTs(account.address);
+
+    setNfts(nfts);
+  };
+
   const validNFTs = nfts
-    .map((item) => item.data.content.fields)
+    .map((item) => item)
     .filter((f) => f.latitude && f.longitude);
 
   return (
@@ -98,74 +103,82 @@ export default function Collection_items() {
           <>
             {viewMode === "list" && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
-                {validNFTs?.map((item) => (
-                  <article key={item?.id?.id}>
-                    <div className="dark:bg-jacarta-700 dark:border-jacarta-700 border-jacarta-100 rounded-2.5xl block border bg-white p-[1.1875rem] transition-shadow hover:shadow-lg">
-                      <figure className="relative">
-                        <img
-                          src={`https://aggregator.walrus-testnet.walrus.space/v1/blobs/${item?.image_url}`}
-                          alt={item?.name}
-                          className="w-full h-[230px] rounded-[0.625rem] object-cover"
-                        />
-                      </figure>
-                      <div className="mt-7 flex items-center justify-between">
-                        <a
-                          href={`https://suiexplorer.com/object/${item?.id?.id}?network=testnet`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-display mb-2 *:text-jacarta-700 hover:text-accent text-base dark:text-white flex justify-between w-full items-center gap-1"
-                        >
-                          <span className="w-full text-xl">{item?.name}</span>
-                          <span className="w-full flex justify-end mr-4 text-sm opacity-70">
-                            #{shortenAddress(item?.id?.id)}
-                          </span>
-                        </a>
-                      </div>
-                      <div className="mt-2 text-sm space-y-1">
-                        <div className="flex justify-between">
-                          <span className="font-semibold">Rarity:</span>
-                          <div
-                            style={{
-                              color:
-                                item?.rarity === "Common"
-                                  ? "#9CA3AF"
-                                  : item?.rarity === "Epic"
-                                  ? "#7C3AED"
-                                  : "#FACC15",
-                            }}
-                            className={`font-semibold w-full text-lg flex justify-end mr-4 ${
-                              item?.rarity === "Common"
-                                ? "text-gray-500"
-                                : item?.rarity === "Epic"
-                                ? "text-purple-600"
-                                : "text-yellow-400"
-                            }`}
+                {validNFTs?.map((item) => {
+                  return (
+                    <article key={item?.id?.id}>
+                      <div className="dark:bg-jacarta-700 dark:border-jacarta-700 border-jacarta-100 rounded-2.5xl block border bg-white p-[1.1875rem] transition-shadow hover:shadow-lg">
+                        <figure className="relative">
+                          <img
+                            src={`${item?.image_url}`}
+                            alt={item?.name}
+                            className="w-full h-[230px] rounded-[0.625rem] object-cover"
+                          />
+                        </figure>
+                        <div className="mt-7 flex items-center justify-between">
+                          <a
+                            href={`https://suiexplorer.com/object/${item?.id}?network=testnet`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-display mb-2 *:text-jacarta-700 hover:text-accent text-base dark:text-white flex justify-between w-full items-center gap-1"
                           >
-                            {item?.rarity}
+                            <span
+                              className="w-full"
+                              style={{ color: "#3B9797" }}
+                            >
+                              {item?.name}
+                            </span>
+                            <span className="w-full flex text-sm justify-end mr-4  opacity-70">
+                              #{shortenAddress(item?.id)}
+                            </span>
+                          </a>
+                        </div>
+
+                        <div className="mt-2 text-sm space-y-1">
+                          <div className="flex justify-between">
+                            <span className="font-semibold">Rarity:</span>
+                            <div
+                              style={{
+                                color:
+                                  item?.rarity === "Common"
+                                    ? "#9CA3AF"
+                                    : item?.rarity === "Epic"
+                                    ? "#7C3AED"
+                                    : "#FACC15",
+                              }}
+                              className={`font-semibold w-full text-lg flex justify-end mr-4 ${
+                                item?.rarity === "Common"
+                                  ? "text-gray-500"
+                                  : item?.rarity === "Epic"
+                                  ? "text-purple-600"
+                                  : "text-yellow-400"
+                              }`}
+                            >
+                              {getRarityName(item?.rarity)}
+                            </div>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="font-semibold">Perfection:</span>
+                            <span className="w-full  font-semibold flex justify-end text-base mr-4">
+                              {item?.perfection}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="font-semibold">Latitude:</span>
+                            <span className="w-full flex justify-end mr-4">
+                              {item?.latitude}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="font-semibold">Longitude:</span>
+                            <span className="w-full flex justify-end mr-4">
+                              {item?.longitude}
+                            </span>
                           </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="font-semibold">Completion:</span>
-                          <span className="w-full  font-semibold flex justify-end text-base mr-4">
-                            {item?.completion}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-semibold">Latitude:</span>
-                          <span className="w-full flex justify-end mr-4">
-                            {item?.latitude}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-semibold">Longitude:</span>
-                          <span className="w-full flex justify-end mr-4">
-                            {item?.longitude}
-                          </span>
-                        </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             )}
 
@@ -176,7 +189,9 @@ export default function Collection_items() {
             )}
           </>
         ) : (
-          <p className="text-center mt-10 text-gray-500">No NFTs found.</p>
+          <p className="text-center mt-10 text-gray-500">
+            {account ? "No NFTs found." : "Please connect your account."}
+          </p>
         )}
       </div>
     </section>
