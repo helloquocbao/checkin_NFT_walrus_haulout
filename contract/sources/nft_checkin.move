@@ -22,10 +22,11 @@ public struct ProfileNFT has key {
     social_links: vector<string::String>,
     country: string::String,
     created_at: u64,
-    claimed_badges: vector<u64>,
-    badge_count: u64,
-    is_verified: bool, // ✅ Trạng thái verify
-    verify_votes: u64, // 📊 Số vote nhận được
+    claimed_badges: vector<ClaimedBadgeInfo>, // 📍 Danh sách badges đã claim + stats
+    badge_count: u64,                         // 🏅 Số unique locations đã claim
+    total_claims: u64,                        // 📊 Tổng số lần claim (include reclaim)
+    is_verified: bool,                        // ✅ Trạng thái verify
+    verify_votes: u64,                        // 🗳️ Số vote nhận được
 }
 
 public struct ProfileRegistry has key {
@@ -43,6 +44,16 @@ public struct BadgeKey has copy, drop, store { location_id: u64 }
 public struct Badge has drop, store {
     location_name: string::String,
     description: string::String,
+    image_url: string::String,
+    rarity: u8,
+    perfection: u64,
+    created_at: u64,
+}
+
+/// 📍 Claimed Badge Info - Lưu thông tin badge đã claim (dùng để hiển thị trong profile)
+public struct ClaimedBadgeInfo has copy, drop, store {
+    location_id: u64,
+    location_name: string::String,
     image_url: string::String,
     rarity: u8,
     perfection: u64,
@@ -108,6 +119,8 @@ public struct VoterRegistry has key {
     id: UID,
     // Map: voter_address -> VecSet<profile_addresses đã vote>
     votes_given: Table<address, VecSet<address>>,
+    // Map: profile_owner_address -> u64 (số lượt vote nhận được)
+    votes_received: Table<address, u64>,
 }
 
 fun init(otw: PROFILES, ctx: &mut tx_context::TxContext) {
@@ -116,7 +129,7 @@ fun init(otw: PROFILES, ctx: &mut tx_context::TxContext) {
     display::add(&mut display, string::utf8(b"name"), string::utf8(b"{name}"));
     display::add(&mut display, string::utf8(b"description"), string::utf8(b"{bio}"));
     display::add(&mut display, string::utf8(b"image_url"), string::utf8(b"{avatar_url}"));
-    display::add(&mut display, string::utf8(b"creator"), string::utf8(b"Memory token"));
+    display::add(&mut display, string::utf8(b"creator"), string::utf8(b"Memory Mint"));
     display::update_version(&mut display);
 
     let deployer = sender(ctx);
@@ -131,10 +144,19 @@ fun init(otw: PROFILES, ctx: &mut tx_context::TxContext) {
     let voter_registry = VoterRegistry {
         id: object::new(ctx),
         votes_given: table::new(ctx),
+        votes_received: table::new(ctx),
+    };
+
+    let location_registry = LocationRegistry {
+        id: object::new(ctx),
+        deployer,
+        total_locations: 0,
+        locations: table::new(ctx),
     };
 
     transfer::share_object(registry);
     transfer::share_object(voter_registry);
+    transfer::share_object(location_registry);
     transfer::public_transfer(publisher, deployer);
     transfer::public_transfer(display, deployer);
 }
@@ -174,8 +196,9 @@ entry fun mint_profile(
         social_links,
         country,
         created_at: clock::timestamp_ms(clock),
-        claimed_badges: vector::empty<u64>(),
+        claimed_badges: vector::empty<ClaimedBadgeInfo>(),
         badge_count: 0,
+        total_claims: 0,
         is_verified: false,
         verify_votes: 0,
     };
@@ -216,6 +239,39 @@ entry fun add_location(
     };
     table::add(&mut registry.locations, id, template);
     registry.total_locations = id + 1;
+}
+
+/// 📝 Update profile information (phí 0.05 SUI)
+entry fun update_profile(
+    registry: &ProfileRegistry,
+    profile: &mut ProfileNFT,
+    new_name: string::String,
+    new_bio: string::String,
+    new_avatar_url: string::String,
+    new_social_links: vector<string::String>,
+    payment: Coin<SUI>,
+    ctx: &mut tx_context::TxContext,
+) {
+    let sender_addr = sender(ctx);
+    
+    // 🔒 Chỉ owner mới update được
+    assert!(profile.owner == sender_addr, 1);
+    
+    // 💰 Thu phí update = 0.05 SUI
+    let fee_amount = 50_000_000; // 0.05 SUI = 5 * 10^7 MIST
+    let balance = coin::value(&payment);
+    assert!(balance >= fee_amount, 10);
+    
+    let mut pay = payment;
+    let fee_coin = coin::split<SUI>(&mut pay, fee_amount, ctx);
+    transfer::public_transfer(fee_coin, registry.deployer);
+    transfer::public_transfer(pay, sender_addr);
+    
+    // ✅ Update profile fields
+    profile.name = new_name;
+    profile.bio = new_bio;
+    profile.avatar_url = new_avatar_url;
+    profile.social_links = new_social_links;
 }
 
 fun image_for_rarity(rarity: u8, template: &BadgeTemplate): string::String {
@@ -273,27 +329,42 @@ entry fun claim_badge(
 
     let key = BadgeKey { location_id };
 
-    // 🧱 Ghi đè badge cũ (nếu có)
-    if (df::exists_(&profile.id, key)) {
+    // 🧱 Ghi đè badge cũ (nếu có) - reclaim sẽ update badge
+    let is_new_badge = !df::exists_(&profile.id, key);
+    if (!is_new_badge) {
         df::remove<BadgeKey, Badge>(&mut profile.id, key);
+        // 🔄 Reclaim: xóa old info từ claimed_badges
+        let count = vector::length(&profile.claimed_badges);
+        let mut i = 0;
+        while (i < count) {
+            let badge_info = vector::borrow(&profile.claimed_badges, i);
+            if (badge_info.location_id == location_id) {
+                let _ = vector::remove(&mut profile.claimed_badges, i);
+                break
+            };
+            i = i + 1;
+        };
     };
     df::add<BadgeKey, Badge>(&mut profile.id, key, badge);
 
-    // 🧾 Cập nhật danh sách claimed (chỉ thêm nếu chưa có)
-    let mut found = false;
-    let count = vector::length(&profile.claimed_badges);
-    let mut i = 0;
-    while (i < count) {
-        if (vector::borrow(&profile.claimed_badges, i) == &location_id) {
-            found = true;
-            break
-        };
-        i = i + 1;
-    };
-    if (!found) {
-        vector::push_back(&mut profile.claimed_badges, location_id);
+    // 📊 Cập nhật badge_count và claimed_badges
+    if (is_new_badge) {
         profile.badge_count = profile.badge_count + 1;
     };
+
+    // 📍 Luôn thêm/update badge info trong claimed_badges
+    let badge_info = ClaimedBadgeInfo {
+        location_id,
+        location_name: template.location_name,
+        image_url: img_url,
+        rarity: rarity_level,
+        perfection,
+        created_at: clock::timestamp_ms(clock),
+    };
+    vector::push_back(&mut profile.claimed_badges, badge_info);
+
+    // 📈 Luôn cộng total_claims (mỗi lần claim hoặc reclaim)
+    profile.total_claims = profile.total_claims + 1;
 
     // 🔔 Emit event GachaResult để frontend hiển thị kết quả quay
     event::emit(BadgeGachaResult {
@@ -312,18 +383,29 @@ entry fun claim_badge(
     });
 }
 
-/// 🗳️ Vote để verify profile (mỗi user tối đa 2 votes)
+/// 🗳️ Vote để verify profile (mỗi user tối đa 2 votes, phí 0.02 SUI)
+/// Lưu ý: Lưu votes trong VoterRegistry thay vì ProfileNFT (vì ProfileNFT thuộc về user)
 entry fun vote_for_profile(
+    registry: &ProfileRegistry,
     voter_registry: &mut VoterRegistry,
-    target_profile: &mut ProfileNFT,
+    target_profile_address: address,
+    payment: Coin<SUI>,
     ctx: &mut tx_context::TxContext,
 ) {
     let voter_addr = sender(ctx);
-    let target_addr = target_profile.owner;
-    let profile_id = object::uid_to_address(&target_profile.id);
     
     // 🚫 Không thể vote cho chính mình
-    assert!(voter_addr != target_addr, 300); // Error: Cannot vote for yourself
+    assert!(voter_addr != target_profile_address, 300); // Error: Cannot vote for yourself
+    
+    // 💰 Thu phí vote = 0.02 SUI
+    let fee_amount = 20_000_000; // 0.02 SUI = 2 * 10^7 MIST
+    let balance = coin::value(&payment);
+    assert!(balance >= fee_amount, 10);
+    
+    let mut pay = payment;
+    let fee_coin = coin::split<SUI>(&mut pay, fee_amount, ctx);
+    transfer::public_transfer(fee_coin, registry.deployer);
+    transfer::public_transfer(pay, voter_addr);
     
     // 📊 Check số lượt vote đã dùng
     if (!table::contains(&voter_registry.votes_given, voter_addr)) {
@@ -333,29 +415,40 @@ entry fun vote_for_profile(
     let voter_votes = table::borrow_mut(&mut voter_registry.votes_given, voter_addr);
     
     // 🚫 Đã vote cho profile này rồi
-    assert!(!vec_set::contains(voter_votes, &target_addr), 301); // Error: Already voted for this profile
+    assert!(!vec_set::contains(voter_votes, &target_profile_address), 301); // Error: Already voted for this profile
     
     // 🚫 Đã vote tối đa 2 người
     assert!(vec_set::length(voter_votes) < 2, 302); // Error: Max 2 votes per user
     
-    // ✅ Thêm vote
-    vec_set::insert(voter_votes, target_addr);
-    target_profile.verify_votes = target_profile.verify_votes + 1;
+    // ✅ Thêm vote vào votes_given
+    vec_set::insert(voter_votes, target_profile_address);
     
-    // 📢 Emit event
+    // ✅ Cập nhật votes_received
+    if (!table::contains(&voter_registry.votes_received, target_profile_address)) {
+        table::add(&mut voter_registry.votes_received, target_profile_address, 1);
+    } else {
+        let vote_count = table::borrow_mut(&mut voter_registry.votes_received, target_profile_address);
+        *vote_count = *vote_count + 1;
+    };
+    
+    let new_vote_count = *table::borrow(&voter_registry.votes_received, target_profile_address);
+    
+    // 📢 Emit event (注：profile_id 使用 target_profile_address 代替因为我们没有 profile object)
     event::emit(ProfileVoted {
         voter: voter_addr,
-        profile_owner: target_addr,
-        profile_id,
-        new_vote_count: target_profile.verify_votes,
+        profile_owner: target_profile_address,
+        profile_id: target_profile_address,  // Use owner address as profile_id since we don't have the object
+        new_vote_count,
     });
 }
 
-/// ✅ Claim verify status (owner tự set sau khi đủ votes)
+/// ✅ Claim verify status (owner tự set sau khi đủ votes, phí 0.02 SUI)
 entry fun claim_verification(
     registry: &ProfileRegistry,
+    voter_registry: &VoterRegistry,
     profile: &mut ProfileNFT,
-    ctx: &tx_context::TxContext,
+    payment: Coin<SUI>,
+    ctx: &mut tx_context::TxContext,
 ) {
     let sender_addr = sender(ctx);
     let profile_id = object::uid_to_address(&profile.id);
@@ -366,11 +459,27 @@ entry fun claim_verification(
     // 🚫 Đã verify rồi
     assert!(!profile.is_verified, 303); // Error: Already verified
     
-    // 📊 Check đủ votes chưa
-    assert!(profile.verify_votes >= registry.verify_threshold, 304); // Error: Not enough votes
+    // 📊 Check đủ votes chưa (từ VoterRegistry)
+    let votes_count = if (table::contains(&voter_registry.votes_received, sender_addr)) {
+        *table::borrow(&voter_registry.votes_received, sender_addr)
+    } else {
+        0
+    };
+    assert!(votes_count >= registry.verify_threshold, 304); // Error: Not enough votes
+    
+    // 💰 Thu phí claim verification = 0.02 SUI
+    let fee_amount = 20_000_000; // 0.02 SUI = 2 * 10^7 MIST
+    let balance = coin::value(&payment);
+    assert!(balance >= fee_amount, 10);
+    
+    let mut pay = payment;
+    let fee_coin = coin::split<SUI>(&mut pay, fee_amount, ctx);
+    transfer::public_transfer(fee_coin, registry.deployer);
+    transfer::public_transfer(pay, sender_addr);
     
     // ✅ Set verified
     profile.is_verified = true;
+    profile.verify_votes = votes_count;  // Update profile with final vote count
     
     // 📢 Emit event
     event::emit(ProfileVerified {
@@ -481,47 +590,19 @@ public fun badge_created_at(badge: &Badge): u64 {
     badge.created_at
 }
 
-/// Create new Badge (for marketplace unwrapping)
-public fun new_badge(
-    location_name: string::String,
-    description: string::String,
-    image_url: string::String,
-    rarity: u8,
-    perfection: u64,
-    created_at: u64,
-): Badge {
-    Badge {
-        location_name,
-        description,
-        image_url,
-        rarity,
-        perfection,
-        created_at,
-    }
-}
-
-/// Destroy badge and return fields (for marketplace wrapping)
-public fun unpack_badge(badge: Badge): (string::String, string::String, string::String, u8, u64, u64) {
-    let Badge {
-        location_name,
-        description,
-        image_url,
-        rarity,
-        perfection,
-        created_at,
-    } = badge;
-    
-    (location_name, description, image_url, rarity, perfection, created_at)
-}
-
-/// Create BadgeKey (for marketplace)
-public fun new_badge_key(location_id: u64): BadgeKey {
-    BadgeKey { location_id }
-}
-
 /// Get badge count
 public fun badge_count(profile: &ProfileNFT): u64 {
     profile.badge_count
+}
+
+/// Get total claims (mỗi lần claim hoặc reclaim)
+public fun total_claims(profile: &ProfileNFT): u64 {
+    profile.total_claims
+}
+
+/// Get claimed badges với stats (location_id, rarity, perfection)
+public fun claimed_badges(profile: &ProfileNFT): vector<ClaimedBadgeInfo> {
+    profile.claimed_badges
 }
 
 /// Get total locations

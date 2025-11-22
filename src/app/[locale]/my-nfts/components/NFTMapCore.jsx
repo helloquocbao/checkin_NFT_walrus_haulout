@@ -1,5 +1,5 @@
 "use client";
-
+import { getUserMemoryNFTs } from "@/services/profileService";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -20,49 +20,49 @@ export default function NFTMapCore() {
   const client = useSuiClient();
   const account = useCurrentAccount();
   const [nfts, setNfts] = useState([]);
-
+  const getRarityName = (rarity) => {
+    switch (rarity) {
+      case 0:
+        return "Common";
+      case 1:
+        return "Rare";
+      case 2:
+        return "Epic";
+      case 3:
+        return "Legendary";
+      default:
+        return "Unknown";
+    }
+  };
   const defaultPosition = [10.762622, 106.660172];
 
   useEffect(() => {
     if (!account?.address) return;
 
-    const packageId =
-      "0xcc84871dc79970f2dab50400699552c2ebeba058c8e6a8a4e9f5ace44464311f";
-    const moduleName = "checkin_nft";
-
-    (async () => {
-      try {
-        const res = await client.getOwnedObjects({
-          owner: account.address,
-          options: { showType: true, showContent: true },
-        });
-
-        const userNFTs = res.data.filter((obj) =>
-          obj.data?.content?.type?.includes(
-            `${packageId}::${moduleName}::CheckinNFT`
-          )
-        );
-
-        setNfts(userNFTs);
-      } catch (e) {
-        console.error("Error loading NFTs:", e);
-      }
-    })();
+    fetchNFTs();
   }, [account, client]);
 
+  const fetchNFTs = async () => {
+    if (!account?.address) return;
+
+    const nfts = await getUserMemoryNFTs(account.address);
+
+    setNfts(nfts);
+  };
+
   const validNFTs = nfts
-    .map((item) => item.data.content.fields)
+    .map((item) => item)
     .filter((f) => f.latitude && f.longitude);
 
   if (typeof window === "undefined") return null;
-  console.log("validNFTs", validNFTs);
+
   return (
-    <div className="h-[500px] w-full">
+    <div className="h-[70vh] w-full">
       <MapContainer
         center={defaultPosition}
         zoom={4}
         scrollWheelZoom
-        style={{ height: 500, width: "100%" }}
+        style={{ height: "70vh", width: "100%" }}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -80,8 +80,8 @@ export default function NFTMapCore() {
                   <figure className="relative">
                     <a>
                       <img
-                        src={`https://aggregator.walrus-testnet.walrus.space/v1/blobs/${item?.image_url}`}
-                        alt="item 5"
+                        src={`${item?.image_url}`}
+                        alt={`NFT Image of ${item?.name}`}
                         className="w-full h-[230px] rounded-[0.625rem] object-cover"
                       />
                     </a>
@@ -93,9 +93,9 @@ export default function NFTMapCore() {
                       rel="noopener noreferrer"
                       className="font-display mb-2 *:text-jacarta-700 hover:text-accent text-base dark:text-white flex justify-between w-full items-center gap-1"
                     >
-                      <span className="w-full text-xl"> {item?.name} </span>
-                      <span className="w-full flex justify-end mr-4">
-                        #{shortenAddress(item?.id?.id)}
+                      <span className="w-full"> {item?.name} </span>
+                      <span className="w-full flex text-xs justify-end mr-4">
+                        #{shortenAddress(item?.id)}
                       </span>
                     </a>
                   </div>
@@ -119,14 +119,14 @@ export default function NFTMapCore() {
                             : "text-[#FFCC00]"
                         }`}
                       >
-                        {item?.rarity}
+                        {getRarityName(item?.rarity)}
                       </span>
                       <br />
                     </span>
                     <span className="flex justify-between mr-1  mb-1">
-                      <span className="font-semibold">Completion:</span>
+                      <span className="font-semibold">Perfection:</span>
                       <span className="w-full flex justify-end text-base mr-4 font-semibold">
-                        {item?.completion}
+                        {item?.perfection}
                       </span>
                       <br />
                     </span>

@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
+import toast from "react-hot-toast";
 
 export default function CameraCapture({ onCapture }) {
   const videoRef = useRef(null);
@@ -11,8 +12,8 @@ export default function CameraCapture({ onCapture }) {
     if (stream) {
       timeout = setTimeout(() => {
         stopCamera();
-        alert(
-          "⚠️ Camera đã tự động tắt vì không có thao tác chụp sau 30 giây."
+        toast.error(
+          "⚠️ The camera has automatically turned off due to no shooting operation after 30 seconds.."
         );
       }, 30000);
     }
@@ -30,9 +31,9 @@ export default function CameraCapture({ onCapture }) {
           name: "camera",
         });
         if (permissionStatus.state === "denied") {
-          alert(
-            "⚠️ Quyền truy cập máy ảnh đã bị chặn!\n\n" +
-              "Hãy vào Cài đặt trình duyệt → Quyền (Permissions) → Cho phép truy cập camera, sau đó tải lại trang."
+          toast.error(
+            "⚠️ Camera access has been blocked!\n\n" +
+              "Please go to your browser settings → Permissions → Allow camera access, then reload the page."
           );
           return;
         }
@@ -51,13 +52,13 @@ export default function CameraCapture({ onCapture }) {
     } catch (err) {
       console.error("Camera error:", err);
       if (err.name === "NotAllowedError") {
-        alert(
-          "⚠️ Bạn đã từ chối quyền truy cập camera.\n\nHãy bật lại quyền trong Cài đặt trình duyệt và tải lại trang."
+        toast.error(
+          "⚠️ You have denied camera access.\n\nPlease enable camera permissions in your browser settings and reload the page."
         );
       } else if (err.name === "NotFoundError") {
-        alert("🚫 Không tìm thấy camera trên thiết bị của bạn!");
+        toast.error("🚫 No camera found on your device!");
       } else {
-        alert("❌ Không thể bật camera: " + err.message);
+        toast.error("❌ Unable to start camera: " + err.message);
       }
     }
   };
@@ -116,11 +117,12 @@ export default function CameraCapture({ onCapture }) {
               className="text-accent font-display text-sm font-semibold"
               onClick={stopCamera}
             >
-              ✖ Hủy check-in
+              ✖ Cancel check-in
             </button>
           </div>
           <p className="text-sm text-gray-500">
-            Nếu bạn không muốn chụp nữa, bấm “Hủy check-in” để tắt camera.
+            If you no longer want to take a photo, click “Cancel check-in” to
+            turn off the camera.
           </p>
         </div>
       )}

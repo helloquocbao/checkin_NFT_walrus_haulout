@@ -1,16 +1,15 @@
 "use client";
-import Footer from "./footer";
-import Wallet_modal from "./modal/wallet_modal";
-import BidsModal from "./modal/bidsModal";
+// import BidsModal from "./modal/bidsModal";
 import BuyModal from "./modal/buyModal";
 import Header01 from "./header/Header01";
+import { Toaster } from "react-hot-toast";
 
 export default function Layout({ children }) {
   return (
     <>
       <Header01 />
-      <Wallet_modal />
-      <BidsModal />
+      {/* <BidsModal /> */}
+      <Toaster />
       <BuyModal />
       <main>{children}</main>
       {/* <Footer /> */}

@@ -37,12 +37,7 @@ export const counterSlice = createSlice({
     handle_collection_activity_item_data: (state, payload) => {
       state.collection_activity_item_data = payload.data;
     },
-    walletModalShow: (state) => {
-      state.walletModal = true;
-    },
-    walletModalhide: (state) => {
-      state.walletModal = false;
-    },
+
     bidsModalShow: (state) => {
       state.bidsModal = true;
     },
@@ -169,8 +164,6 @@ export const {
   closeMblMenu,
   openDropdown,
   closeDropdown,
-  walletModalShow,
-  walletModalhide,
   bidsModalShow,
   bidsModalHide,
   buyModalShow,

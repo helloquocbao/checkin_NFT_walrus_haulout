@@ -21,7 +21,7 @@ export const metadata: Metadata = {
         height: 600,
       },
     ],
-    locale: "vi_VN", // Replace with appropriate locale
+    locale: "en_US", // Replace with appropriate locale
     type: "website",
   },
 };
@@ -33,12 +33,12 @@ export default async function RootLayout({
 }>) {
   const getLocale = async () => {
     const cookieStore = await cookies();
-    return cookieStore.get("NEXT_LOCALE")?.value || "vi";
+    return cookieStore.get("NEXT_LOCALE")?.value || "en";
   };
   const locale = await getLocale();
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale}>
       <head></head>
       <body className="m-0 p-0">
         <div className=" bg-light main-container">

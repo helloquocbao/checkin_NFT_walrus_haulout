@@ -14,9 +14,7 @@ import Likes from "../likes";
 
 const BidsCarousel = () => {
   const dispatch = useDispatch();
-  const handleclick = () => {
-    console.log("clicked on ");
-  };
+
   return (
     <>
       <Swiper
