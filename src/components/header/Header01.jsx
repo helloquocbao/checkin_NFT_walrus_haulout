@@ -12,7 +12,7 @@ import {
 import WalletButton from "../wallet-btn/WalletButton";
 import { useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
 import { useEffect, useState } from "react";
-function shortenAddress(address: any, chars = 4) {
+function shortenAddress(address, chars = 4) {
   if (!address) return "";
   return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`;
 }
