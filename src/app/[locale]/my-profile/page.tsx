@@ -1133,7 +1133,7 @@ export default function MyProfilePage() {
 
           {profileData.badges.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {profileData.badges.map((badge: any, index) => {
+              {profileData.badges.map((badge: any, index: number) => {
                 console.log("Rendering badge:", profileData);
                 return (
                   <Link
