@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import React, { useEffect, useState } from "react";
 import { useSuiClient, useCurrentAccount } from "@mysten/dapp-kit";
-function shortenAddress(address: any, chars = 4) {
+function shortenAddress(address, chars = 4) {
   if (!address) return "";
   return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`;
 }

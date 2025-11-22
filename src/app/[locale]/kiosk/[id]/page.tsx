@@ -12,7 +12,7 @@ import Link from "next/link";
 import { CONTRACT_CONFIG } from "@/config/index";
 import { getUserKiosks } from "@/services/profileService";
 
-function shortenAddress(address: any, chars = 4) {
+function shortenAddress(address, chars = 4) {
   if (!address) return "";
   return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`;
 }

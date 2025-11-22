@@ -12,7 +12,7 @@ import {
 import WalletButton from "../wallet-btn/WalletButton";
 import { useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
 import { useEffect, useState } from "react";
-function shortenAddress(address: any, chars = 4) {
+function shortenAddress(address, chars = 4) {
   if (!address) return "";
   return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`;
 }
@@ -270,7 +270,57 @@ export default function Header01() {
                 </a>
               </Link>
             </li>
-
+            <li className="group" onClick={() => setToggle(false)}>
+              <Link legacyBehavior href="/claim-badge">
+                <a>
+                  <button className="text-jacarta-700 font-display hover:text-accent focus:text-accent dark:hover:text-accent dark:focus:text-accent flex items-center justify-between py-3.5 text-base dark:text-white lg:px-5">
+                    <span
+                      className={
+                        isChildrenPageActive("/kiosk", route.asPath)
+                          ? "text-accent dark:text-accent"
+                          : ""
+                      }
+                    >
+                      Claim Badge
+                    </span>
+                  </button>
+                </a>
+              </Link>
+            </li>
+            <li className="group" onClick={() => setToggle(false)}>
+              <Link legacyBehavior href="/create">
+                <a>
+                  <button className="text-jacarta-700 font-display hover:text-accent focus:text-accent dark:hover:text-accent dark:focus:text-accent flex items-center justify-between py-3.5 text-base dark:text-white lg:px-5">
+                    <span
+                      className={
+                        isChildrenPageActive("/kiosk", route.asPath)
+                          ? "text-accent dark:text-accent"
+                          : ""
+                      }
+                    >
+                      Check-in and Mint
+                    </span>
+                  </button>
+                </a>
+              </Link>
+            </li>
+            <li className="group" onClick={() => setToggle(false)}>
+              <Link legacyBehavior href="/my-nfts">
+                <a>
+                  <button className="text-jacarta-700 font-display hover:text-accent focus:text-accent dark:hover:text-accent dark:focus:text-accent flex items-center justify-between py-3.5 text-base dark:text-white lg:px-5">
+                    <span
+                      className={
+                        isChildrenPageActive("/kiosk", route.asPath)
+                          ? "text-accent dark:text-accent"
+                          : ""
+                      }
+                    >
+                      My NFTs
+                    </span>
+                  </button>
+                </a>
+              </Link>
+            </li>
             <li className="group" onClick={() => setToggle(false)}>
               <Link legacyBehavior href="/kiosk">
                 <a>
@@ -282,7 +332,7 @@ export default function Header01() {
                           : ""
                       }
                     >
-                      🛒 Marketplace
+                      Marketplace
                     </span>
                   </button>
                 </a>
@@ -300,7 +350,7 @@ export default function Header01() {
                           : ""
                       }
                     >
-                      💰 Earnings
+                      Earnings
                     </span>
                   </button>
                 </a>
