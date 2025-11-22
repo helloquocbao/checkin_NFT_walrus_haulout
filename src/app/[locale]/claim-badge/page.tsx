@@ -12,6 +12,7 @@ import {
   claimBadge,
 } from "@/services/profileService";
 import { getAllLocations } from "@/services/locationService";
+import toast from "react-hot-toast";
 
 interface Location {
   id: number;
@@ -138,12 +139,12 @@ export default function ClaimBadgePage() {
   // Handle claim badge
   const handleClaimBadge = async (locationId: number) => {
     if (!currentAccount?.address) {
-      alert("Please connect your wallet first");
+      toast.error("Please connect your wallet first");
       return;
     }
 
     if (!userProfile) {
-      alert("Please create a profile first to claim badges");
+      toast.error("Please create a profile first to claim badges");
       return;
     }
 
@@ -158,40 +159,8 @@ export default function ClaimBadgePage() {
           transaction: tx as any,
         },
         {
-          onSuccess: async (result) => {
-            // Extract badge details từ transaction events
-            const badgeDetails = {
-              rarity: 0,
-              perfection: 500,
-            };
-
-            // Parse events từ transaction result
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const resultData = result as any;
-
-            if (resultData?.effects?.events) {
-              for (const event of resultData.effects.events) {
-                if (event.type?.includes("BadgeGachaResult")) {
-                  const eventData = event.parsedJson as Record<string, unknown>;
-                  if (eventData) {
-                    badgeDetails.rarity = (eventData.rarity as number) || 0;
-                    badgeDetails.perfection =
-                      (eventData.perfection as number) || 500;
-
-                    break;
-                  }
-                }
-              }
-            }
-
-            // Show alert with badge details
-            const rarityNames = ["Common", "Rare", "Epic", "Legendary"];
-            const rarityName = rarityNames[badgeDetails.rarity] || "Unknown";
-            const score = (badgeDetails.perfection / 1000) * 100;
-
-            alert(
-              `🎉 Badge Claimed!\n\nRarity: ${rarityName}\nPerfection: ${badgeDetails.perfection}/1000\nScore: ${score}%`
-            );
+          onSuccess: async () => {
+            toast.success(`🎉 Badge Claimed! `);
 
             // Reload profile to get updated badges with location_name, image_url
             setTimeout(async () => {
@@ -255,14 +224,14 @@ export default function ClaimBadgePage() {
           },
           onError: (error) => {
             console.error("Claim failed:", error);
-            alert("Failed to claim badge: " + error.message);
+            toast.error("Failed to claim badge: " + error.message);
             setClaiming(null);
           },
         }
       );
     } catch (error) {
       console.error("Error claiming badge:", error);
-      alert("Error: " + (error as Error).message);
+      toast.error("Error: " + (error as Error).message);
       setClaiming(null);
     }
   };
@@ -558,7 +527,7 @@ export default function ClaimBadgePage() {
                       {hasBadge ? (
                         <>
                           <button
-                            style={{ color: "" }}
+                            style={{ backgroundColor: "#59AC77" }}
                             onClick={() => handleClaimBadge(location.id)}
                             disabled={claiming === location.id}
                             className={`w-full py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base transition-colors ${
@@ -572,6 +541,7 @@ export default function ClaimBadgePage() {
                               : "Reclaim Badge (0.01 SUI)"}
                           </button>
                           <Link
+                            style={{ backgroundColor: "#F5D2D2" }}
                             href={`/location/${location.id}`}
                             className="w-full block text-center py-2.5 sm:py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-semibold text-sm sm:text-base transition-colors"
                           >
@@ -581,6 +551,7 @@ export default function ClaimBadgePage() {
                       ) : (
                         <>
                           <button
+                            style={{ backgroundColor: "#59AC77" }}
                             onClick={() => handleClaimBadge(location.id)}
                             disabled={claiming === location.id}
                             className={`w-full py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base transition-colors ${
@@ -594,6 +565,7 @@ export default function ClaimBadgePage() {
                               : "Claim Badge (0.01 SUI)"}
                           </button>
                           <Link
+                            style={{ backgroundColor: "#F5D2D2" }}
                             href={`/location/${location.id}`}
                             className="w-full block text-center py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-xs sm:text-sm transition-colors"
                           >

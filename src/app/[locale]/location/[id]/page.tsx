@@ -309,7 +309,7 @@ export default function LocationDetailPage() {
           className="h-full w-full"
         />
       </picture>
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 pt-32">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center pb-12 pt-2">
         <div className="w-full max-w-xl mx-auto px-4">
           {/* Back Button */}
           <div className="mb-6 text-center">
@@ -342,15 +342,13 @@ export default function LocationDetailPage() {
                     ✓ {getRarityName(userBadge.rarity)} Badge
                   </div>
                 ) : (
-                  <div className="bg-red-100 text-red-600 px-4 py-2 rounded-full text-sm font-bold border border-red-300 shadow">
+                  <div className="bg-red-100 text-red-600 px-4 py-2 rounded-full text-sm font-bold border border-red-300 shadow mt-2">
                     Not Claimed
                   </div>
                 )}
               </div>
               {/* Location ID */}
-              <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-gray-100 px-3 py-2 rounded text-sm font-semibold shadow">
-                #{location.id}
-              </div>
+              <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-gray-100 px-3 py-2 rounded text-sm font-semibold shadow"></div>
             </div>
 
             <div className="p-8">
@@ -422,6 +420,7 @@ export default function LocationDetailPage() {
               {/* Action Buttons */}
               <div className="flex flex-col md:flex-row gap-4 mb-2">
                 <button
+                  style={{ backgroundColor: "#E19898" }}
                   onClick={handleClaimBadge}
                   disabled={claiming}
                   className={`flex-1 py-3 rounded-lg font-semibold text-lg transition-colors ${
@@ -439,6 +438,7 @@ export default function LocationDetailPage() {
                     : "Claim Badge (0.01 SUI)"}
                 </button>
                 <Link
+                  style={{ backgroundColor: "#AEDEFC" }}
                   href="/my-profile"
                   className="flex-1 py-3 bg-gray-500 text-gray-50 rounded-lg hover:bg-gray-600 text-center font-semibold"
                 >
