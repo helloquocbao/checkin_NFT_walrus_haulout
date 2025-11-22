@@ -20,6 +20,8 @@ import {
 import { useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 import { uploadImageToWalrus, getWalrusUrl } from "@/utils/walrusUpload";
 import Tippy from "@tippyjs/react";
+import { useRouter } from "next-intl/client";
+import toast from "react-hot-toast";
 
 interface Badge {
   location_id: number;
@@ -89,6 +91,8 @@ export default function MyProfilePage() {
   const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(
     null
   );
+
+  const { push } = useRouter();
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     return date.toLocaleDateString("en-US", {
@@ -191,12 +195,12 @@ export default function MyProfilePage() {
   // Handle mint profile
   const handleMintProfile = async () => {
     if (!currentAccount?.address) {
-      alert("Please connect wallet first");
+      toast.error("Please connect wallet first");
       return;
     }
 
     if (!formData.name.trim()) {
-      alert("Please enter your name");
+      toast.error("Please enter your name");
       return;
     }
 
@@ -210,7 +214,7 @@ export default function MyProfilePage() {
           const blobId = await uploadImageToWalrus(selectedAvatarFile);
           finalAvatarUrl = getWalrusUrl(blobId);
         } catch (uploadError) {
-          alert(
+          toast.error(
             "Failed to upload avatar: " +
               (uploadError instanceof Error
                 ? uploadError.message
@@ -236,19 +240,19 @@ export default function MyProfilePage() {
         },
         {
           onSuccess: () => {
-            alert("Profile created successfully!");
+            toast.success("Profile created successfully!");
             window.location.reload();
           },
           onError: (error) => {
             console.error("Mint failed:", error);
-            alert("Failed to create profile: " + error.message);
+            toast.error("Failed to create profile: " + error.message);
             setMinting(false);
           },
         }
       );
     } catch (error) {
       console.error("Error creating profile:", error);
-      alert("Error: " + (error as Error).message);
+      toast.error("Error: " + (error as Error).message);
       setMinting(false);
     }
   };
@@ -256,12 +260,12 @@ export default function MyProfilePage() {
   // Handle update profile
   const handleUpdateProfile = async () => {
     if (!currentAccount?.address || !profileData) {
-      alert("Please connect wallet first");
+      toast.error("Please connect wallet first");
       return;
     }
 
     if (!formData.name.trim()) {
-      alert("Please enter your name");
+      toast.error("Please enter your name");
       return;
     }
 
@@ -275,7 +279,7 @@ export default function MyProfilePage() {
           const blobId = await uploadImageToWalrus(selectedAvatarFile);
           finalAvatarUrl = getWalrusUrl(blobId);
         } catch (uploadError) {
-          alert(
+          toast.error(
             "Failed to upload avatar: " +
               (uploadError instanceof Error
                 ? uploadError.message
@@ -300,19 +304,19 @@ export default function MyProfilePage() {
         },
         {
           onSuccess: () => {
-            alert("Profile updated successfully!");
+            toast.success("Profile updated successfully!");
             window.location.reload();
           },
           onError: (error) => {
             console.error("Update failed:", error);
-            alert("Failed to update profile: " + error.message);
+            toast.error("Failed to update profile: " + error.message);
             setUpdating(false);
           },
         }
       );
     } catch (error) {
       console.error("Error updating profile:", error);
-      alert("Error: " + (error as Error).message);
+      toast.error("Error: " + (error as Error).message);
       setUpdating(false);
     }
   };
@@ -330,14 +334,14 @@ export default function MyProfilePage() {
     try {
       // Validate file type
       if (!file.type.startsWith("image/")) {
-        alert("Please select a valid image file");
+        toast.error("Please select a valid image file");
         return;
       }
 
       // Validate file size (max 10MB)
       const maxSize = 10 * 1024 * 1024; // 10MB
       if (file.size > maxSize) {
-        alert("Image size must be less than 10MB");
+        toast.error("Image size must be less than 10MB");
         return;
       }
 
@@ -347,14 +351,14 @@ export default function MyProfilePage() {
       setSelectedAvatarFile(file);
     } catch (error) {
       console.error("Error selecting avatar:", error);
-      alert("Error: " + (error as Error).message);
+      toast.error("Error: " + (error as Error).message);
     }
   };
 
   // List NFT to Kiosk
   const handleListNFT = async () => {
     if (!listingNFT || !listingPrice || !currentAccount?.address) {
-      alert("Please fill in all required fields");
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -376,7 +380,7 @@ export default function MyProfilePage() {
         }
 
         // Create kiosk
-        alert("Creating your Kiosk...");
+        toast.info("Creating your Kiosk...");
         try {
           const createKioskTx = await createKiosk();
 
@@ -386,7 +390,7 @@ export default function MyProfilePage() {
             >[0],
             {
               onSuccess: async () => {
-                alert(
+                toast.success(
                   "Kiosk created successfully! Please try listing your NFT again."
                 );
                 setListingNFT(null);
@@ -402,12 +406,16 @@ export default function MyProfilePage() {
                   errorMsg.includes("rejected") ||
                   errorMsg.includes("User rejected")
                 ) {
-                  alert("Transaction cancelled. You can try again anytime.");
+                  toast.error(
+                    "Transaction cancelled. You can try again anytime."
+                  );
                 } else if (errorMsg.includes("1001")) {
-                  alert("You already have a Kiosk! Refreshing to load it...");
+                  toast.error(
+                    "You already have a Kiosk! Refreshing to load it..."
+                  );
                   setTimeout(() => window.location.reload(), 1500);
                 } else {
-                  alert("Failed to create Kiosk: " + errorMsg);
+                  toast.error("Failed to create Kiosk: " + errorMsg);
                 }
                 setListingLoading(false);
               },
@@ -415,7 +423,7 @@ export default function MyProfilePage() {
           );
         } catch (txError) {
           console.error("Error building kiosk transaction:", txError);
-          alert(
+          toast.error(
             "Error building transaction: " +
               (txError instanceof Error ? txError.message : String(txError))
           );
@@ -428,7 +436,7 @@ export default function MyProfilePage() {
       const kioskId = kiosks[0]?.id || "";
 
       if (!kioskId) {
-        alert("Error: Could not find your Kiosk ID");
+        toast.error("Error: Could not find your Kiosk ID");
         setListingLoading(false);
         return;
       }
@@ -443,7 +451,7 @@ export default function MyProfilePage() {
       }
 
       if (!capId) {
-        alert(
+        toast.error(
           "Error: Could not find your KioskOwnerCap. Your kiosk may not be fully initialized."
         );
         setListingLoading(false);
@@ -465,20 +473,22 @@ export default function MyProfilePage() {
         { transaction: tx } as unknown as Parameters<typeof signAndExecute>[0],
         {
           onSuccess: () => {
-            alert(`NFT "${listingNFT.name}" listed for ${listingPrice} SUI`);
+            toast.success(
+              `NFT "${listingNFT.name}" listed for ${listingPrice} SUI`
+            );
             setListingNFT(null);
             setListingPrice("");
           },
           onError: (error) => {
             console.error("List failed:", error);
-            alert("Failed to list NFT: " + error.message);
+            toast.error("Failed to list NFT: " + error.message);
             setListingLoading(false);
           },
         }
       );
     } catch (error) {
       console.error("Error listing NFT:", error);
-      alert("Error: " + (error as Error).message);
+      toast.error("Error: " + (error as Error).message);
       setListingLoading(false);
     }
   };
@@ -554,50 +564,6 @@ export default function MyProfilePage() {
               <p className="text-gray-600 text-center mb-8">
                 Connect your wallet to start collecting badges from locations
               </p>
-
-              {/* Placeholder form showing what will happen */}
-              <div className="space-y-6 opacity-60 pointer-events-none">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Name *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter your name"
-                    disabled
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Bio
-                  </label>
-                  <textarea
-                    placeholder="Tell us about yourself (optional)"
-                    disabled
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed h-24 resize-none"
-                  />
-                </div>
-
-                <button
-                  disabled
-                  className="w-full py-3 rounded-lg font-semibold text-lg bg-gray-300 text-gray-600 cursor-not-allowed"
-                >
-                  Create Profile
-                </button>
-              </div>
-
-              <div className="text-center mt-8">
-                <p className="text-gray-600">
-                  <Link
-                    href="/claim-badge"
-                    className="text-blue-600 hover:text-blue-700 font-semibold"
-                  >
-                    browse locations first
-                  </Link>
-                </p>
-              </div>
             </div>
           </div>
         </div>
@@ -697,29 +663,15 @@ export default function MyProfilePage() {
                       <img
                         src={avatarPreview}
                         alt="Avatar preview"
-                        className="w-24 h-24 rounded-full object-cover border-2 border-blue-300"
+                        width={250}
+                        height={250}
+                        className="  object-cover border-2 border-blue-300"
                       />
                       <p className="text-xs text-blue-600 font-semibold">
                         ✓ Selected (will upload on Create)
                       </p>
                     </div>
                   )}
-
-                  {/* URL Input (shows Walrus URL after upload) */}
-                  <input
-                    type="url"
-                    placeholder="https://example.com/avatar.jpg (or select above)"
-                    value={formData.avatarUrl}
-                    onChange={(e) =>
-                      setFormData({ ...formData, avatarUrl: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900 placeholder-gray-400 text-xs"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    {formData.avatarUrl.includes("walrus")
-                      ? "✅ Already on Walrus"
-                      : "Select image or paste existing URL"}
-                  </p>
                 </div>
 
                 {/* Preview */}
@@ -752,7 +704,8 @@ export default function MyProfilePage() {
                 {/* Submit Button */}
                 <button
                   onClick={handleMintProfile}
-                  disabled={minting || !formData.name.trim()}
+                  style={{ backgroundColor: "#C2E2FA" }}
+                  // disabled={minting || !formData.name.trim()}
                   className={`w-full py-3 rounded-lg font-semibold text-lg transition-colors ${
                     minting || !formData.name.trim()
                       ? "bg-gray-300 text-gray-600 cursor-not-allowed"
@@ -770,8 +723,9 @@ export default function MyProfilePage() {
                 <div className="text-center space-y-2">
                   <p>
                     <Link
+                      style={{ backgroundColor: "#898AC4" }}
                       href="/claim-badge"
-                      className="text-blue-600 hover:text-blue-700 font-semibold"
+                      className="text-blue-600 hover:text-blue-700 rounded-lg p-2 font-semibold"
                     >
                       Browse locations first
                     </Link>
@@ -1233,7 +1187,18 @@ export default function MyProfilePage() {
               <h2 className="lg:text-3xl text-lg my-3 font-bold text-gray-900 flex items-center gap-2">
                 🛍️ My Kiosk Listings
                 <span className="lg:text-lg bg-green-100 text-green-600 px-3 py-1 rounded-full">
-                  ( {kioskListings.length})
+                  ({kioskListings.length})
+                </span>
+              </h2>
+              <h2
+                onClick={() => push("/seller-earnings")}
+                className="lg:text-3xl text-lg mb-3 font-bold text-gray-900 flex items-center gap-2 hover:underline"
+              >
+                <span
+                  style={{ color: "#FF6C0C" }}
+                  className="  lg:text-lg bg-green-100 text-green-600 px-3 py-1 rounded-full"
+                >
+                  💰 Seller Earnings
                 </span>
               </h2>
             </div>
