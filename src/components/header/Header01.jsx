@@ -4,6 +4,7 @@ import Link from "next/link";
 import Logo from "../../../public/images/logo.png";
 import WhiteLogo from "../../../public/images/logo_white.png";
 import { useRouter } from "next-intl/client";
+import { UserCog } from "lucide-react";
 import {
   isChildrenPageActive,
   isParentPageActive,
@@ -154,7 +155,11 @@ export default function Header01() {
 
             <div className="ml-8 hidden items-center lg:flex xl:ml-12">
               <WalletButton />
-              <div onClick={() => push("/my-profile")}>user</div>
+              {account && (
+                <div onClick={() => push("/my-profile")}>
+                  <UserCog className="ml-2" />
+                </div>
+              )}
             </div>
             {/* End header right content (metamask and other) for desktop */}
           </div>
