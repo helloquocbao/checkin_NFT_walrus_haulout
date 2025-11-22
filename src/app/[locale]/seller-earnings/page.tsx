@@ -234,7 +234,7 @@ export default function SellerEarningsPage() {
               </p>
               <Link
                 href="/"
-                className="mt-4 inline-block bg-accent text-white px-6 py-2 rounded-full"
+                className="mt-4 inline-block bg-accent  px-6 py-2 rounded-full"
               >
                 Go Home
               </Link>
@@ -281,7 +281,7 @@ export default function SellerEarningsPage() {
               <p className="mt-4 text-lg text-red-500">{error}</p>
               <Link
                 href="/kiosk"
-                className="mt-4 inline-block bg-accent text-white px-6 py-2 rounded-full"
+                className="mt-4 inline-block bg-accent  px-6 py-2 rounded-full"
               >
                 Go to Marketplace
               </Link>
@@ -365,7 +365,7 @@ export default function SellerEarningsPage() {
 
         <div className="max-w-2xl mx-auto">
           <div className="rounded-lg overflow-hidden shadow-lg bg-white dark:bg-jacarta-700 p-8">
-            <h1 className="text-4xl font-bold mb-8 dark:text-white">
+            <h1 className="text-4xl font-bold mb-8 dark:">
               💰 Seller Earnings
             </h1>
 
@@ -378,13 +378,8 @@ export default function SellerEarningsPage() {
                 <span className="text-5xl font-bold text-accent">
                   {proceedsInSUI.toFixed(4)}
                 </span>
-                <span className="text-2xl font-semibold dark:text-white">
-                  SUI
-                </span>
+                <span className="text-2xl font-semibold dark:">SUI</span>
               </div>
-              <p className="text-xs text-gray-500 dark:text-jacarta-400">
-                ≈ ${(proceedsInSUI * 2).toFixed(2)} USD (approx)
-              </p>
             </div>
 
             {/* Info Box */}
@@ -430,7 +425,7 @@ export default function SellerEarningsPage() {
             <button
               onClick={handleWithdraw}
               disabled={withdrawing || proceedsInSUI === 0 || successTx !== ""}
-              className={`w-full py-4 px-6 rounded-full font-semibold text-lg text-white transition-all ${
+              className={`w-full py-4 px-6 rounded-full font-semibold text-lg  transition-all ${
                 withdrawing || proceedsInSUI === 0 || successTx
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-accent hover:bg-accent-dark shadow-accent-volume hover:shadow-lg"
@@ -469,13 +464,13 @@ export default function SellerEarningsPage() {
             <div className="mt-8 pt-8 border-t border-jacarta-100 dark:border-jacarta-600 flex gap-4">
               <Link
                 href="/kiosk"
-                className="flex-1 py-3 px-4 text-center bg-jacarta-100 dark:bg-jacarta-600 text-gray-900 dark:text-white rounded-full font-medium hover:bg-jacarta-200 dark:hover:bg-jacarta-500 transition-colors"
+                className="flex-1 py-3 px-4 text-center bg-jacarta-100 dark:bg-jacarta-600 text-gray-900 dark: rounded-full font-medium hover:bg-jacarta-200 dark:hover:bg-jacarta-500 transition-colors"
               >
                 📦 Browse Marketplace
               </Link>
               <Link
                 href="/my-nfts"
-                className="flex-1 py-3 px-4 text-center bg-jacarta-100 dark:bg-jacarta-600 text-gray-900 dark:text-white rounded-full font-medium hover:bg-jacarta-200 dark:hover:bg-jacarta-500 transition-colors"
+                className="flex-1 py-3 px-4 text-center bg-jacarta-100 dark:bg-jacarta-600 text-gray-900 dark: rounded-full font-medium hover:bg-jacarta-200 dark:hover:bg-jacarta-500 transition-colors"
               >
                 🎨 My NFTs
               </Link>
