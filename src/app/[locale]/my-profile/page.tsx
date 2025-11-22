@@ -380,7 +380,8 @@ export default function MyProfilePage() {
         }
 
         // Create kiosk
-        toast.info("Creating your Kiosk...");
+        toast.success("Creating your Kiosk...");
+
         try {
           const createKioskTx = await createKiosk();
 
