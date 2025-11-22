@@ -398,53 +398,104 @@ export default function ClaimBadgePage() {
                 (badge) => badge.location_id === location.id
               );
               const hasBadge = !!userBadge;
-
+              console.log("Rendering location:", userBadge);
               return (
                 <div
                   key={location.id}
-                  className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+                  style={{ backgroundColor: "#fcfdf6", borderColor: "#BED754" }}
+                  className="rounded-lg shadow-lg overflow-hidden border hover:shadow-xl transition-shadow mr-4"
                 >
                   {/* Location Image */}
-                  <div className="relative h-40 sm:h-48 md:h-56 lg:h-48">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <div className="relative sm:h-48 md:h-56 lg:h-48">
                     <img
-                      src={getLocationImage(location, userBadge?.rarity)}
+                      src={location?.imageCommon}
                       alt={location.name}
-                      className="w-full h-full object-cover"
+                      className="w-full  object-cover"
                     />
 
+                    <div className="flex justify-between p-2">
+                      <div className="flex flex-col items-center">
+                        <img
+                          src={location?.imageCommon}
+                          className="w-12 h-12 object-contain"
+                        />
+                        <span className="text-sm font-semibold ">Common</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <img
+                          src={location?.imageEpic}
+                          className="w-12 h-12 object-contain"
+                        />
+                        <span className="text-sm font-semibold ">Epic</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <img
+                          src={location?.imageRare}
+                          className="w-12 h-12 object-contain"
+                        />
+                        <span className="text-sm font-semibold ">Rare</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <img
+                          src={location?.imageLegendary}
+                          className="w-12 h-12 object-contain"
+                        />
+                        <span className="text-sm font-semibold ">
+                          Legendary
+                        </span>
+                      </div>
+                    </div>
+
                     {/* Badge Status Medal - Circular Badge */}
-                    <div className="absolute -bottom-3 -right-3">
+                    <div className="rounded-full bg-accent-lighter">
                       {hasBadge ? (
                         <div
-                          className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center shadow-lg border-4 border-white ${getRarityColor(
-                            userBadge.rarity
-                          )}`}
+                          className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center ml-2 py-2 shadow-lg border-4 `}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={userBadge.image_url}
                             alt={getRarityName(userBadge.rarity)}
-                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover"
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full "
                           />
+                          <div className="ml-2 text-green-600 text-xs mt-2 space-y-1">
+                            <div>
+                              Rarity:{" "}
+                              <span className="font-semibold">
+                                {getRarityName(userBadge.rarity)}
+                              </span>
+                            </div>
+                            <div>
+                              Perfection:{" "}
+                              <span className="font-semibold">
+                                {userBadge.perfection}/1000
+                              </span>{" "}
+                              (
+                              {((userBadge.perfection / 1000) * 100).toFixed(1)}
+                              %)
+                            </div>
+                            <div>
+                              📅 Claimed:{" "}
+                              <span className="font-semibold">
+                                {formatClaimDate(userBadge.created_at)}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       ) : (
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center shadow-lg border-4 border-white bg-gray-100 text-gray-600">
+                        <div className="w-20 py-2 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center shadow-lg border-4 border-white bg-gray-100 text-gray-600">
                           <div className="text-center">
                             <div className="text-lg sm:text-xl font-bold">
                               🔒
                             </div>
                             <div className="text-xs font-semibold">
-                              Not Claimed
+                              {currentAccount
+                                ? "Not Claimed"
+                                : "Connect Wallet"}
                             </div>
                           </div>
                         </div>
                       )}
-                    </div>
-
-                    {/* Location ID Badge */}
-                    <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-gray-100 px-2 py-1 rounded text-sm">
-                      #{location.id}
                     </div>
                   </div>
 
@@ -499,15 +550,7 @@ export default function ClaimBadgePage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                        <div className="text-sm text-gray-700">
-                          <span className="font-semibold">Not Claimed Yet</span>
-                          <div className="text-gray-600 text-xs mt-1">
-                            Rarity chances: Common 60% • Rare 25% • Epic 12% •
-                            Legendary 3%
-                          </div>
-                        </div>
-                      </div>
+                      <></>
                     )}
 
                     {/* Action Buttons */}
@@ -515,6 +558,7 @@ export default function ClaimBadgePage() {
                       {hasBadge ? (
                         <>
                           <button
+                            style={{ color: "" }}
                             onClick={() => handleClaimBadge(location.id)}
                             disabled={claiming === location.id}
                             className={`w-full py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base transition-colors ${
