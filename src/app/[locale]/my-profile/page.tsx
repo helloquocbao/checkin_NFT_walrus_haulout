@@ -274,9 +274,17 @@ export default function MyProfilePage() {
 
       // If user selected a new avatar file, upload it first
       let finalAvatarUrl = formData.avatarUrl;
-      if (selectedAvatarFile && !formData.avatarUrl.includes("walrus")) {
+      if (selectedAvatarFile) {
         try {
-          const blobId = await uploadImageToWalrus(selectedAvatarFile);
+          const blobId = await toast.promise(
+            uploadImageToWalrus(selectedAvatarFile),
+            {
+              loading: "Uploading avatar...",
+              success: "Avatar uploaded successfully!",
+              error: "Failed to upload avatar",
+            }
+          );
+
           finalAvatarUrl = getWalrusUrl(blobId);
         } catch (uploadError) {
           toast.error(
