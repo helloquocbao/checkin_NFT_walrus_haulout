@@ -377,7 +377,7 @@ export default function ClaimBadgePage() {
                   {/* Location Image */}
                   <div className="relative sm:h-48 md:h-56 lg:h-48">
                     <img
-                      src={location?.imageCommon}
+                      src={location?.imageLegendary}
                       alt={location.name}
                       className="w-full  object-cover"
                     />
