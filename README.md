@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+🐋 Check-in NFT Walrus Haulout — Sui-based NFT Ecosystem
+Check-in NFT Walrus Haulout is a full Web3 ecosystem built on Sui Blockchain, enabling users to create digital identities, preserve memories, earn badges, and trade NFTs transparently.
+All interactions are done fully on-chain, using Next.js 14, React, Tailwind CSS, and direct integration with Sui RPC—no backend server required.
 
-## Getting Started
+🚀 Core Features
+🧩 1. Profile NFT
+Users can mint a Profile NFT that represents their Web3 identity.
 
-First, run the development server:
+Stores avatar, social links, bio, nationality, and immutable metadata.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Supports on-chain verification through community voting.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+📸 2. Memory NFT (Check-in NFT)
+Capture personal memories such as photos, locations, timestamps, emotions.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Each memory is minted as a unique NFT and displayed in a personal timeline.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Supports image storage via Walrus or Tusky.
 
-## Learn More
+🏅 3. Badges & Gacha System
+Claim badges at events or locations.
 
-To learn more about Next.js, take a look at the following resources:
+Gacha system allows randomized NFT rewards.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Badges contribute to profile ranking and achievements.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+🛒 4. Marketplace + Kiosk (Sui Standard)
+List NFTs for sale using a Sui Kiosk.
 
-## Deploy on Vercel
+Buy/sell with SUI token.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Sellers can withdraw marketplace proceeds directly to their wallet.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Supports hot bids, “buy now”, and personalized listing management.
+
+🧪 5. Profile Verification & Voting
+On-chain community voting system to verify real users.
+
+Verified profiles receive a Verify Badge NFT.
+
+📦 6. Kiosk Management
+Create and manage personal kiosks.
+
+Move NFTs in/out of the kiosk.
+
+List, delist, withdraw proceeds, claim sales revenue.
