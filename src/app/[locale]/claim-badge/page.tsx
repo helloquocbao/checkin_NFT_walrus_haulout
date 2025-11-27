@@ -55,12 +55,37 @@ export default function ClaimBadgePage() {
   const [userProfile, setUserProfile] = useState<ProfileData | null>(null);
   const [userBadges, setUserBadges] = useState<Badge[]>([]);
   const [claiming, setClaiming] = useState<number | null>(null);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [locationErrors, setLocationErrors] = useState<{
+    [key: number]: string;
+  }>({});
 
   // Load locations and user profile
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
+
+        // Get user's current location
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              setUserLocation({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+              });
+            },
+            (error) => {
+              console.error("Error getting user location:", error);
+              toast.error(
+                "Could not access your location. Some features may not work."
+              );
+            }
+          );
+        }
 
         // Load all locations from contract (always load regardless of wallet connection)
         const locationsData = await getAllLocations();
@@ -136,8 +161,36 @@ export default function ClaimBadgePage() {
     loadData();
   }, [currentAccount?.address]);
 
+  // Format distance display
+  const formatDistance = (distanceInMeters: number): string => {
+    if (distanceInMeters >= 1000) {
+      return `${(distanceInMeters / 1000).toFixed(1)}km`;
+    }
+    return `${distanceInMeters.toFixed(0)}m`;
+  };
+
+  // Calculate distance between two coordinates (in meters)
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number => {
+    const R = 6371000; // Earth's radius in meters
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
   // Handle claim badge
-  const handleClaimBadge = async (locationId: number) => {
+  const handleClaimBadge = async (locationId: number, location: Location) => {
     if (!currentAccount?.address) {
       toast.error("Please connect your wallet first");
       return;
@@ -147,6 +200,41 @@ export default function ClaimBadgePage() {
       toast.error("Please create a profile first to claim badges");
       return;
     }
+
+    // Check user location
+    if (!userLocation) {
+      toast.error(
+        "Could not access your location. Please enable location services."
+      );
+      setLocationErrors({
+        ...locationErrors,
+        [locationId]: "Location unavailable",
+      });
+      return;
+    }
+
+    // Calculate distance to location
+    const distance = calculateDistance(
+      userLocation.latitude,
+      userLocation.longitude,
+      location.latitude,
+      location.longitude
+    );
+
+    // Check if user is within 100 meters
+    if (distance > 100) {
+      const errorMsg = `📍 You're ${distance.toFixed(
+        0
+      )}m away. Must be within 100m to claim!`;
+      toast.error(errorMsg);
+      setLocationErrors({ ...locationErrors, [locationId]: errorMsg });
+      return;
+    }
+
+    // Clear previous error for this location
+    const newErrors = { ...locationErrors };
+    delete newErrors[locationId];
+    setLocationErrors(newErrors);
 
     try {
       setClaiming(locationId);
@@ -522,58 +610,146 @@ export default function ClaimBadgePage() {
                       <></>
                     )}
 
-                    {/* Action Buttons */}
-                    <div className="space-y-2 sm:space-y-2.5">
-                      {hasBadge ? (
+                    {/* Check conditions for enabling claim button */}
+                    {(() => {
+                      const canClaim =
+                        currentAccount?.address &&
+                        userProfile &&
+                        userLocation &&
+                        calculateDistance(
+                          userLocation.latitude,
+                          userLocation.longitude,
+                          location.latitude,
+                          location.longitude
+                        ) <= 100;
+
+                      const distance = userLocation
+                        ? calculateDistance(
+                            userLocation.latitude,
+                            userLocation.longitude,
+                            location.latitude,
+                            location.longitude
+                          )
+                        : null;
+
+                      return (
                         <>
-                          <button
-                            style={{ backgroundColor: "#59AC77" }}
-                            onClick={() => handleClaimBadge(location.id)}
-                            disabled={claiming === location.id}
-                            className={`w-full py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base transition-colors ${
-                              claiming === location.id
-                                ? "bg-green-300 text-green-900 cursor-not-allowed"
-                                : "bg-green-500 text-green-50 hover:bg-green-600"
-                            }`}
-                          >
-                            {claiming === location.id
-                              ? "Reclaiming..."
-                              : "Reclaim Badge (0.01 SUI)"}
-                          </button>
-                          <Link
-                            style={{ backgroundColor: "#F5D2D2" }}
-                            href={`/location/${location.id}`}
-                            className="w-full block text-center py-2.5 sm:py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-semibold text-sm sm:text-base transition-colors"
-                          >
-                            View Details
-                          </Link>
+                          {/* Action Buttons */}
+                          <div className="space-y-2 sm:space-y-2.5">
+                            {hasBadge ? (
+                              <>
+                                <button
+                                  style={{
+                                    backgroundColor: canClaim
+                                      ? "#59AC77"
+                                      : "#ccc",
+                                  }}
+                                  onClick={() =>
+                                    handleClaimBadge(location.id, location)
+                                  }
+                                  disabled={
+                                    claiming === location.id || !canClaim
+                                  }
+                                  className={`w-full py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base transition-colors ${
+                                    claiming === location.id
+                                      ? "bg-green-300 text-green-900 cursor-not-allowed"
+                                      : canClaim
+                                      ? "bg-green-500 text-green-50 hover:bg-green-600"
+                                      : "bg-gray-300 text-gray-600 cursor-not-allowed"
+                                  }`}
+                                  title={
+                                    !canClaim
+                                      ? distance !== null
+                                        ? `Too far: ${formatDistance(
+                                            distance
+                                          )} away (need ≤100m)`
+                                        : "Location not available"
+                                      : ""
+                                  }
+                                >
+                                  {claiming === location.id
+                                    ? "Reclaiming..."
+                                    : "Reclaim Badge (0.01 SUI)"}
+                                </button>
+                                <Link
+                                  style={{ backgroundColor: "#F5D2D2" }}
+                                  href={`/location/${location.id}`}
+                                  className="w-full block text-center py-2.5 sm:py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-semibold text-sm sm:text-base transition-colors"
+                                >
+                                  View Details
+                                </Link>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  style={{
+                                    backgroundColor: canClaim
+                                      ? "#59AC77"
+                                      : "#ccc",
+                                  }}
+                                  onClick={() =>
+                                    handleClaimBadge(location.id, location)
+                                  }
+                                  disabled={
+                                    claiming === location.id || !canClaim
+                                  }
+                                  className={`w-full py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base transition-colors ${
+                                    claiming === location.id
+                                      ? "bg-blue-300 text-blue-900 cursor-not-allowed"
+                                      : canClaim
+                                      ? "bg-blue-500 text-blue-50 hover:bg-blue-600"
+                                      : "bg-gray-300 text-gray-600 cursor-not-allowed"
+                                  }`}
+                                  title={
+                                    !canClaim
+                                      ? !currentAccount?.address
+                                        ? "Connect wallet first"
+                                        : !userProfile
+                                        ? "Create profile first"
+                                        : distance !== null
+                                        ? `Too far: ${formatDistance(
+                                            distance
+                                          )} away (need ≤100m)`
+                                        : "Location not available"
+                                      : ""
+                                  }
+                                >
+                                  {claiming === location.id
+                                    ? "Claiming..."
+                                    : "Claim Badge (0.01 SUI)"}
+                                </button>
+                                <Link
+                                  style={{ backgroundColor: "#F5D2D2" }}
+                                  href={`/location/${location.id}`}
+                                  className="w-full block text-center py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-xs sm:text-sm transition-colors"
+                                >
+                                  View Location
+                                </Link>
+                              </>
+                            )}
+                            {/* Status Message */}
+                            {!canClaim && (
+                              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs sm:text-sm text-yellow-700">
+                                {!currentAccount?.address ? (
+                                  "🔗 Connect wallet to claim"
+                                ) : !userProfile ? (
+                                  "👤 Create profile first"
+                                ) : !userLocation ? (
+                                  "📍 Enable location services"
+                                ) : distance !== null && distance > 100 ? (
+                                  <span>
+                                    📍 You&apos;re {formatDistance(distance)}{" "}
+                                    away.
+                                    <br />
+                                    Get within 100m to claim!
+                                  </span>
+                                ) : null}
+                              </div>
+                            )}
+                          </div>
                         </>
-                      ) : (
-                        <>
-                          <button
-                            style={{ backgroundColor: "#59AC77" }}
-                            onClick={() => handleClaimBadge(location.id)}
-                            disabled={claiming === location.id}
-                            className={`w-full py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base transition-colors ${
-                              claiming === location.id
-                                ? "bg-blue-300 text-blue-900 cursor-not-allowed"
-                                : "bg-blue-500 text-blue-50 hover:bg-blue-600"
-                            }`}
-                          >
-                            {claiming === location.id
-                              ? "Claiming..."
-                              : "Claim Badge (0.01 SUI)"}
-                          </button>
-                          <Link
-                            style={{ backgroundColor: "#F5D2D2" }}
-                            href={`/location/${location.id}`}
-                            className="w-full block text-center py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-xs sm:text-sm transition-colors"
-                          >
-                            View Location
-                          </Link>
-                        </>
-                      )}
-                    </div>
+                      );
+                    })()}
                   </div>
                 </div>
               );
