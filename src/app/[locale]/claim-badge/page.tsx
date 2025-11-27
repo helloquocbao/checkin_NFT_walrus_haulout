@@ -89,6 +89,7 @@ export default function ClaimBadgePage() {
 
         // Load all locations from contract (always load regardless of wallet connection)
         const locationsData = await getAllLocations();
+
         setLocations(locationsData as Location[]);
 
         // Load user profile only if connected
