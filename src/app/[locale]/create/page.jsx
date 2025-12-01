@@ -11,6 +11,7 @@ import {
 import { Transaction } from "@mysten/sui/transactions";
 import { CONTRACT_CONFIG } from "@/config/contracts";
 import toast from "react-hot-toast";
+import { uploadImageWithSignature } from "@/utils/imageSignature";
 
 export default function Create() {
   const dispatch = useDispatch();
@@ -75,7 +76,7 @@ export default function Create() {
     }
   };
 
-  // 🧩 Upload ảnh lên Walrus
+  // 🧩 Upload ảnh với signature verification (chặn CLI)
   const handleUpload = async () => {
     if (!account) {
       toast.error("⚠️ Please connect your Sui wallet before uploading!");
@@ -97,30 +98,16 @@ export default function Create() {
     try {
       setUploading(true);
 
-      const response = await fetch(
-        "https://publisher.walrus-testnet.walrus.space/v1/blobs",
-        {
-          method: "PUT",
-          body: imageBlob,
-        }
-      );
+      // 🔒 Upload với signature verification (chặn CLI)
+      // - Ảnh sẽ được hash (SHA-256)
+      // - Hash ký bằng private key từ ví
+      // - Backend verify signature → không thể CLI gian lận
+      const result = await uploadImageWithSignature(imageBlob, account.address);
 
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
-      }
+      toast.success("✅ Image uploaded with signature verification!");
 
-      const info = await response.json();
-
-      const newBlobId =
-        info?.newlyCreated?.blobObject?.blobId || info?.blobObject?.blobId;
-
-      if (!newBlobId) {
-        throw new Error("BlobId not found in response from Walrus!");
-      }
-
-      const url_image = `https://aggregator.walrus-testnet.walrus.space/v1/blobs/${newBlobId}`;
       // Mint memory NFT on chain
-      await handleMint(url_image);
+      await handleMint(result.imageUrl);
     } catch (err) {
       toast.error(`Upload error: ${err.message}`);
     } finally {
@@ -337,7 +324,7 @@ export default function Create() {
                           </p>
                           <div className="flex items-center justify-center gap-2">
                             <span
-                              className={`px-3 text-xl py-1 rounded-full text-sm font-bold  ${
+                              className={`px-3 py-1 rounded-full text-sm font-bold  ${
                                 nftInfo.rarity === 0
                                   ? "bg-gray-500"
                                   : nftInfo.rarity === 1

@@ -7,11 +7,13 @@ use sui::coin::{Self, Coin};
 use sui::display;
 use sui::dynamic_field as df;
 use sui::event;
+use sui::object;
 use sui::package;
 use sui::sui::SUI;
 use sui::table::{Self, Table};
 use sui::vec_set::{Self, VecSet};
-use sui::tx_context::sender;
+use sui::tx_context::{Self, sender};
+use sui::transfer;
 
 public struct ProfileNFT has key {
     id: UID,
@@ -123,6 +125,23 @@ public struct VoterRegistry has key {
     votes_received: Table<address, u64>,
 }
 
+/// 📸 Image Registry - Track uploaded images để chặn CLI mint
+/// User phải upload ảnh via FE (với signature) trước khi mint
+public struct ImageRegistry has key {
+    id: UID,
+    deployer: address,
+    // Map: image_hash (SHA-256) -> ImageRecord
+    uploaded_images: Table<string::String, ImageRecord>,
+}
+
+/// 📸 Image Record - Thông tin ảnh đã upload
+public struct ImageRecord has copy, drop, store {
+    image_hash: string::String,       // SHA-256 hash của ảnh
+    user: address,                    // User upload
+    upload_timestamp: u64,            // Thời gian upload
+    image_url: string::String,        // URL trên Walrus/storage
+}
+
 fun init(otw: PROFILES, ctx: &mut tx_context::TxContext) {
     let publisher = package::claim(otw, ctx);
     let mut display = display::new<ProfileNFT>(&publisher, ctx);
@@ -154,9 +173,16 @@ fun init(otw: PROFILES, ctx: &mut tx_context::TxContext) {
         locations: table::new(ctx),
     };
 
+    let image_registry = ImageRegistry {
+        id: object::new(ctx),
+        deployer,
+        uploaded_images: table::new(ctx),
+    };
+
     transfer::share_object(registry);
     transfer::share_object(voter_registry);
     transfer::share_object(location_registry);
+    transfer::share_object(image_registry);
     transfer::public_transfer(publisher, deployer);
     transfer::public_transfer(display, deployer);
 }
@@ -173,6 +199,76 @@ entry fun mint_profile(
     ctx: &mut tx_context::TxContext,
 ) {
     let sender_addr = sender(ctx);
+    assert!(!table::contains(&registry.minted_users, sender_addr), 1);
+
+    let fee_amount = 10_000_000;
+    let balance = coin::value(&payment);
+    assert!(balance >= fee_amount, 10);
+
+    let mut pay = payment;
+    let fee_coin = coin::split<SUI>(&mut pay, fee_amount, ctx);
+    transfer::public_transfer(fee_coin, registry.deployer);
+    transfer::public_transfer(pay, sender_addr);
+
+    table::add(&mut registry.minted_users, sender_addr, true);
+    registry.total_profiles = registry.total_profiles + 1;
+
+    let profile_nft = ProfileNFT {
+        id: object::new(ctx),
+        owner: sender_addr,
+        name,
+        bio,
+        avatar_url,
+        social_links,
+        country,
+        created_at: clock::timestamp_ms(clock),
+        claimed_badges: vector::empty<ClaimedBadgeInfo>(),
+        badge_count: 0,
+        total_claims: 0,
+        is_verified: false,
+        verify_votes: 0,
+    };
+
+    event::emit(ProfileCreated {
+        profile_id: object::uid_to_address(&profile_nft.id),
+        owner: sender_addr,
+        name: profile_nft.name,
+    });
+
+    transfer::transfer(profile_nft, sender_addr);
+}
+
+/// 📸 Mint profile with verified image (chặn CLI)
+/// User phải upload ảnh via FE + BE verify signature trước
+entry fun mint_profile_with_verified_image(
+    registry: &mut ProfileRegistry,
+    image_registry: &ImageRegistry,
+    image_hash: string::String,
+    name: string::String,
+    bio: string::String,
+    avatar_url: string::String,
+    social_links: vector<string::String>,
+    country: string::String,
+    payment: Coin<SUI>,
+    clock: &clock::Clock,
+    ctx: &mut tx_context::TxContext,
+) {
+    let sender_addr = sender(ctx);
+    
+    // 1️⃣ Check image was uploaded & verified by BE
+    assert!(table::contains(&image_registry.uploaded_images, image_hash), 401);
+    
+    let image_record = table::borrow(&image_registry.uploaded_images, image_hash);
+    
+    // 2️⃣ Check image belongs to caller
+    assert!(image_record.user == sender_addr, 402);
+    
+    // 3️⃣ Check image upload recent (< 1 hour, prevent stale uploads)
+    let now = clock::timestamp_ms(clock);
+    let time_diff = now - image_record.upload_timestamp;
+    assert!(time_diff < 3_600_000, 403); // 3600 seconds = 1 hour in milliseconds
+    
+    // ✅ Image verification passed → proceed with mint
     assert!(!table::contains(&registry.minted_users, sender_addr), 1);
 
     let fee_amount = 10_000_000;
@@ -498,6 +594,30 @@ entry fun update_verify_threshold(
     assert!(sender(ctx) == registry.deployer, 100);
     assert!(new_threshold > 0 && new_threshold <= 10, 305); // Max 10 votes
     registry.verify_threshold = new_threshold;
+}
+
+/// 📸 Register uploaded image (called by backend after signature verification)
+entry fun register_uploaded_image(
+    image_registry: &mut ImageRegistry,
+    image_hash: string::String,
+    image_url: string::String,
+    clock: &clock::Clock,
+    ctx: &mut tx_context::TxContext,
+) {
+    let user = sender(ctx);
+    
+    // 🚫 Image already registered (prevent duplicate)
+    assert!(!table::contains(&image_registry.uploaded_images, image_hash), 400);
+    
+    // ✅ Add image record
+    let record = ImageRecord {
+        image_hash: image_hash,
+        user,
+        upload_timestamp: clock::timestamp_ms(clock),
+        image_url,
+    };
+    
+    table::add(&mut image_registry.uploaded_images, image_hash, record);
 }
 
 public fun total_profiles(registry: &ProfileRegistry): u64 { registry.total_profiles }
