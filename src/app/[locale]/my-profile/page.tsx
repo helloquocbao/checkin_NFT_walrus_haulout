@@ -1143,7 +1143,7 @@ export default function MyProfilePage() {
                               }
                             </div>
                             <div className="text-xs text-blue-500 font-medium">
-                              Perfection
+                              Rarity
                             </div>
                           </div>
                           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded p-2 text-center border border-blue-200">
@@ -1151,7 +1151,7 @@ export default function MyProfilePage() {
                               {badge.perfection}
                             </div>
                             <div className="text-xs text-blue-500 font-medium">
-                              Rarity
+                              Perfection
                             </div>
                           </div>
 

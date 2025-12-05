@@ -33,12 +33,12 @@ export default function CardKiosk({
           className="w-full h-full object-cover"
         />
 
-        <div className="absolute top-3 left-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+        <div className="absolute top-3 left-3 bg-green text-white px-3 py-1 rounded-full text-xs font-bold">
           ✓ Listed
         </div>
 
         <div
-          className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold ${getRarityColor(
+          className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold text-white bg-accent ${getRarityColor(
             listing.rarity
           )}`}
         >
