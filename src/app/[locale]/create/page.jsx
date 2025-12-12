@@ -11,6 +11,7 @@ import {
 import { Transaction } from "@mysten/sui/transactions";
 import { CONTRACT_CONFIG } from "@/config/contracts";
 import toast from "react-hot-toast";
+import { uploadImageToTusky } from "@/utils/tuskyUpload";
 
 export default function Create() {
   const dispatch = useDispatch();
@@ -75,7 +76,7 @@ export default function Create() {
     }
   };
 
-  // 🧩 Upload ảnh lên Walrus
+  // 🧩 Upload ảnh lên Tusky
   const handleUpload = async () => {
     if (!account) {
       toast.error("⚠️ Please connect your Sui wallet before uploading!");
@@ -97,30 +98,27 @@ export default function Create() {
     try {
       setUploading(true);
 
-      const response = await fetch(
-        "https://publisher.walrus-testnet.walrus.space/v1/blobs",
-        {
-          method: "PUT",
-          body: imageBlob,
-        }
-      );
+      // Convert blob to File for Tusky upload
+      const file = new File([imageBlob], `memory-${Date.now()}.jpg`, {
+        type: imageBlob.type || "image/jpeg",
+      });
 
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
+      // Upload to Tusky
+      const uploadResult = await uploadImageToTusky(file, {
+        isPrivate: false,
+        metadata: {
+          latitude: position.latitude,
+          longitude: position.longitude,
+          uploadedAt: new Date().toISOString(),
+        },
+      });
+
+      if (!uploadResult.url) {
+        throw new Error("Failed to get image URL from Tusky!");
       }
 
-      const info = await response.json();
-
-      const newBlobId =
-        info?.newlyCreated?.blobObject?.blobId || info?.blobObject?.blobId;
-
-      if (!newBlobId) {
-        throw new Error("BlobId not found in response from Walrus!");
-      }
-
-      const url_image = `https://aggregator.walrus-testnet.walrus.space/v1/blobs/${newBlobId}`;
       // Mint memory NFT on chain
-      await handleMint(url_image);
+      await handleMint(uploadResult.url);
     } catch (err) {
       toast.error(`Upload error: ${err.message}`);
     } finally {
@@ -244,7 +242,7 @@ export default function Create() {
         />
       </picture>
       <div className="container text-center py-12">
-        <Meta title="Create NFT with Walrus" />
+        <Meta title="Create NFT with Tusky" />
         {!nftInfo ? (
           <h1 className="text-jacarta-700 lg:pt-0 pt-10 font-bold font-display mb-6 text-center text-3xl dark: lg:text-4xl">
             Checkin and mint NFT
@@ -303,7 +301,7 @@ export default function Create() {
             )}
             {uploading && (
               <p className="text-gray-500 animate-pulse mt-2">
-                Uploading photos to Walrus...
+                Uploading photos to Tusky decentralized storage...
               </p>
             )}
 
