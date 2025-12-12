@@ -335,7 +335,7 @@ export default function Create() {
                           </p>
                           <div className="flex items-center justify-center gap-2">
                             <span
-                              className={`px-3 text-xl py-1 rounded-full text-sm font-bold  ${
+                              className={`px-3 text-xl py-1 rounded-full  font-bold  ${
                                 nftInfo.rarity === 0
                                   ? "bg-gray-500"
                                   : nftInfo.rarity === 1
