@@ -248,7 +248,7 @@ export default function KioskMarketplace() {
                 key={listing.listingId}
                 href={`/kiosk/${listing.listingId}`}
               >
-                <div className="h-full rounded-lg overflow-hidden shadow-lg hover:shadow-2xl bg-white dark:bg-jacarta-700 transition-all hover:scale-105 transform cursor-pointer border-l-4 border-green-500">
+                <div className="h-full mr-3 rounded-lg overflow-hidden shadow-lg hover:shadow-2xl bg-white dark:bg-jacarta-700 transition-all hover:scale-105 transform cursor-pointer border-l-4 border-green-500">
                   {/* Image */}
                   <div className="relative bg-jacarta-100 dark:bg-jacarta-600 aspect-square overflow-hidden">
                     {listing.imageUrl ? (
@@ -256,7 +256,7 @@ export default function KioskMarketplace() {
                       <img
                         src={`${listing.imageUrl}`}
                         alt={listing.name}
-                        className="w-full h-full object-cover hover:scale-110 transition-transform"
+                        className="h-[450px] object-cover hover:scale-110 transition-transform"
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full bg-gray-200 dark:bg-jacarta-600">
@@ -277,12 +277,12 @@ export default function KioskMarketplace() {
                     )}
 
                     {/* Status Badge */}
-                    <div className="absolute top-3 left-3 bg-green-500  px-3 py-1 rounded-full text-xs font-semibold">
+                    <div className="absolute top-3 left-3 bg-accent  text-white px-3 py-1 rounded-full text-xs font-semibold">
                       ✓ Listed
                     </div>
 
                     {/* Rarity Badge */}
-                    <div className="absolute top-3 right-3">
+                    <div className="absolute top-3 text-white bg-green right-3 rounded-full">
                       <span
                         className={`${getRarityColor(
                           listing.rarity

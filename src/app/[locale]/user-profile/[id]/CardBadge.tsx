@@ -38,7 +38,7 @@ export default function CardBadge({
           className="w-full h-full object-cover"
         />
         <div
-          className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold ${getRarityColor(
+          className={`absolute top-3 right-3 px-3 py-1 text-white bg-accent rounded-full text-xs font-semibold ${getRarityColor(
             badge.rarity
           )}`}
         >
