@@ -24,7 +24,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
         <UserContext.Provider value={{ scrollRef: scrollRef }}>
-          <WalletProvider>{children}</WalletProvider>
+          <WalletProvider autoConnect={true}>{children}</WalletProvider>
         </UserContext.Provider>
       </SuiClientProvider>
     </QueryClientProvider>
