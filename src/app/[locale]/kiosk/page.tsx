@@ -26,6 +26,13 @@ export default function KioskMarketplace() {
   const [error, setError] = useState<string>("");
   const [filter, setFilter] = useState<string>("all"); // all, common, rare, epic, legendary
 
+  // Helper function to convert numeric rarity to string
+  const getRarityString = (rarity: string | number): string => {
+    const rarityNum = typeof rarity === "string" ? parseInt(rarity) : rarity;
+    const rarityMap = ["common", "rare", "epic", "legendary"];
+    return rarityMap[rarityNum] || "common";
+  };
+
   // 📥 Load all listings
   useEffect(() => {
     const loadListings = async () => {
@@ -116,9 +123,10 @@ export default function KioskMarketplace() {
 
   // 🔍 Filter listings
   const filteredListings = listings.filter((listing) => {
-    console.log("Filtering listing:", listing);
     if (filter === "all") return true;
-    return listing.rarity.toLowerCase() === filter.toLowerCase();
+    // Handle both string and numeric rarity
+    const rarityString = getRarityString(listing.rarity);
+    return rarityString === filter.toLowerCase();
   });
 
   // 💰 Format price
@@ -128,16 +136,24 @@ export default function KioskMarketplace() {
   };
 
   // 🎨 Get rarity color
-  const getRarityColor = (rarity: string) => {
-    switch (String(rarity).toLowerCase()) {
+  const getRarityColor = (rarity: string | number) => {
+    // Handle both numeric rarity (0,1,2,3) and string rarity ("common", "rare", etc)
+    let rarityString: string;
+    if (typeof rarity === "number" || !isNaN(Number(rarity))) {
+      rarityString = getRarityString(rarity);
+    } else {
+      rarityString = String(rarity).toLowerCase();
+    }
+
+    switch (rarityString) {
       case "legendary":
-        return "bg-yellow-500";
+        return "bg-yellow-500 text-white";
       case "epic":
-        return "bg-purple-500";
+        return "bg-purple-500 text-white";
       case "rare":
-        return "bg-blue-500";
+        return "bg-blue-500 text-white";
       default:
-        return "bg-green-500";
+        return "bg-gray-500 text-white";
     }
   };
 
@@ -183,7 +199,7 @@ export default function KioskMarketplace() {
 
           {["common", "rare", "epic", "legendary"].map((rarity) => {
             const count = listings.filter(
-              (l) => String(l.rarity).toLowerCase() === rarity
+              (l) => getRarityString(l.rarity) === rarity
             ).length;
             return (
               <button
@@ -288,8 +304,10 @@ export default function KioskMarketplace() {
                           listing.rarity
                         )}  px-3 py-1 rounded-full text-xs font-semibold`}
                       >
-                        {String(listing.rarity).charAt(0).toUpperCase() +
-                          String(listing.rarity).slice(1)}
+                        {getRarityString(listing.rarity)
+                          .charAt(0)
+                          .toUpperCase() +
+                          getRarityString(listing.rarity).slice(1)}
                       </span>
                     </div>
                   </div>
