@@ -18,7 +18,7 @@ import {
   getKioskItems,
 } from "@/services/profileService";
 import { useSignAndExecuteTransaction } from "@mysten/dapp-kit";
-import { uploadImageToWalrus, getWalrusUrl } from "@/utils/walrusUpload";
+import { uploadImageToTusky } from "@/utils/tuskyUpload";
 import Tippy from "@tippyjs/react";
 import { useRouter } from "next-intl/client";
 import toast from "react-hot-toast";
@@ -211,8 +211,16 @@ export default function MyProfilePage() {
       let finalAvatarUrl = formData.avatarUrl;
       if (selectedAvatarFile && !formData.avatarUrl.includes("walrus")) {
         try {
-          const blobId = await uploadImageToWalrus(selectedAvatarFile);
-          finalAvatarUrl = getWalrusUrl(blobId);
+          // Upload to Tusky
+          const uploadResult = await toast.promise(
+            uploadImageToTusky(selectedAvatarFile),
+            {
+              loading: "Uploading avatar to Tusky...",
+              success: "Avatar uploaded successfully!",
+              error: "Failed to upload avatar",
+            }
+          );
+          finalAvatarUrl = uploadResult.url;
         } catch (uploadError) {
           toast.error(
             "Failed to upload avatar: " +
@@ -276,16 +284,16 @@ export default function MyProfilePage() {
       let finalAvatarUrl = formData.avatarUrl;
       if (selectedAvatarFile) {
         try {
-          const blobId = await toast.promise(
-            uploadImageToWalrus(selectedAvatarFile),
+          // Upload to Tusky
+          const uploadResult = await toast.promise(
+            uploadImageToTusky(selectedAvatarFile),
             {
-              loading: "Uploading avatar...",
+              loading: "Uploading avatar to Tusky...",
               success: "Avatar uploaded successfully!",
               error: "Failed to upload avatar",
             }
           );
-
-          finalAvatarUrl = getWalrusUrl(blobId);
+          finalAvatarUrl = uploadResult.url;
         } catch (uploadError) {
           toast.error(
             "Failed to upload avatar: " +
@@ -644,10 +652,13 @@ export default function MyProfilePage() {
                   />
                 </div>
 
-                {/* Avatar URL */}
+                {/* Avatar Upload (Tusky) */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Avatar 🖼️
+                    Avatar 🖼️{" "}
+                    <span className="text-xs text-purple-600">
+                      (Powered by Tusky)
+                    </span>
                   </label>
 
                   {/* File Upload Button */}
@@ -722,8 +733,8 @@ export default function MyProfilePage() {
                   }`}
                 >
                   {minting
-                    ? avatarPreview && !formData.avatarUrl.includes("walrus")
-                      ? "📤 Uploading Avatar..."
+                    ? avatarPreview
+                      ? "📤 Uploading to Tusky..."
                       : "Creating Profile..."
                     : "Create Profile"}
                 </button>
@@ -1069,8 +1080,8 @@ export default function MyProfilePage() {
               }`}
             >
               {updating
-                ? avatarPreview && !formData.avatarUrl.includes("walrus")
-                  ? "📤 Uploading..."
+                ? avatarPreview
+                  ? "📤 Uploading to Tusky..."
                   : "Updating..."
                 : "Save Changes"}
             </button>
